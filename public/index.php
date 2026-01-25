@@ -2,7 +2,8 @@
 session_start();
 
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../src/dependencies.php'; // aquí cargas la conexión
+require __DIR__ . '/../src/dependencies.php'; // conexión y dependencias
+
 
 use Slim\Factory\AppFactory;
 use Medoo\Medoo;
@@ -26,25 +27,42 @@ $GLOBALS['db'] = new Medoo([
 
 $app = AppFactory::create();
 
-// Aquí van tus rutas...
-$app->post('/fichas-tecnicas/store', function ($request, $response) {
-    $controller = new \App\Controllers\FichaTecnicaController($GLOBALS['db']);
-    return $controller->store($request, $response);
-})->add(new ValidationMiddleware());
+// Middleware de errores
+$app->addErrorMiddleware(true, true, true);
 
-// Cargar variables de entorno
-$dotenv = Dotenv::createImmutable(__DIR__ . "/..");
-$dotenv->load();
-
-// Ruta raíz de prueba
-$app->get('/', function ($request, $response, $args) {
-    $response->getBody()->write("¡Hola SOS-MicroStack! Slim está funcionando 🚀");
+/**
+ * Función auxiliar para renderizar vistas con layout
+ */
+function renderView($response, $viewPath, $title) {
+    ob_start();
+    include $viewPath;
+    $content = ob_get_clean();
+    include __DIR__ . '/../src/Views/layouts/dashboard.php';
     return $response;
+}
+
+// ------------------- RUTAS ------------------- //
+
+// Ruta principal → Dashboard
+$app->get('/', function ($request, $response, $args) {
+    return renderView(
+        $response,
+        __DIR__ . '/../src/Views/dashboard_home.php',
+        "Dashboard"
+    );
 });
 
+// Fichas Técnicas
+$app->get('/fichas-tecnicas', function ($request, $response, $args) {
+    return renderView(
+        $response,
+        __DIR__ . '/../src/Views/fichas-tecnicas/index.php',
+        "Fichas Técnicas"
+    );
+});
 
 $app->get('/fichas-tecnicas/create', function ($request, $response) {
-    // Aquí deberías pasar $productosBase, $clientes y $referencias desde la DB
+    // Pasar datos desde la DB
     $productosBase = $GLOBALS['db']->select("inrefinv", ["codr","descr"]);
     $clientes      = $GLOBALS['db']->select("geclientes", ["codcli","nombrecli"]);
     $referencias   = $GLOBALS['db']->select("inrefinv", ["codr","descr"]);
@@ -53,28 +71,58 @@ $app->get('/fichas-tecnicas/create', function ($request, $response) {
     return $response;
 });
 
-$app->get('/fichas-tecnicas', function ($request, $response) {
-    // Traer fichas técnicas
-    $fichas = $GLOBALS['db']->select("fichas_tecnicas", "*");
+$app->post('/fichas-tecnicas/store', function ($request, $response) {
+    $controller = new FichaTecnicaController($GLOBALS['db']);
+    return $controller->store($request, $response);
+})->add(new ValidationMiddleware());
 
-    // Para cada ficha, traer fotos y referencias
-    foreach ($fichas as &$ficha) {
-        $ficha['fotos'] = $GLOBALS['db']->select("ficha_tecnica_fotos", ["ruta_imagen"], [
-            "id_ficha_tecnica" => $ficha['id']
-        ]);
-
-        $ficha['referencias'] = $GLOBALS['db']->query("
-            SELECT d.codr, i.descr, d.cantidad, d.talla, d.color
-            FROM ficha_tecnica_detalles d
-            JOIN inrefinv i ON d.codr = i.codr
-            WHERE d.id_ficha_tecnica = {$ficha['id']}
-        ")->fetchAll();
-    }
-
-    require __DIR__ . '/../src/Views/fichas-tecnicas/index.php';
-    return $response;
+/*
+// Clientes
+$app->get('/clientes', function ($request, $response, $args) {
+    return renderView(
+        $response,
+        __DIR__ . '/../src/Views/clientes/index.php',
+        "Clientes"
+    );
 });
 
+// Satélites
+$app->get('/satelites', function ($request, $response, $args) {
+    return renderView(
+        $response,
+        __DIR__ . '/../src/Views/satelites/index.php',
+        "Manejo de Satélites"
+    );
+});
+
+// Orden de Pedido
+$app->get('/orden-pedido', function ($request, $response, $args) {
+    return renderView(
+        $response,
+        __DIR__ . '/../src/Views/orden-pedido/index.php',
+        "Orden de Pedido"
+    );
+});
+
+// Orden de Producción
+$app->get('/orden-produccion', function ($request, $response, $args) {
+    return renderView(
+        $response,
+        __DIR__ . '/../src/Views/orden-produccion/index.php',
+        "Orden de Producción"
+    );
+});
+
+// Seguimiento a OPs
+$app->get('/seguimiento-op', function ($request, $response, $args) {
+    return renderView(
+        $response,
+        __DIR__ . '/../src/Views/seguimiento-op/index.php',
+        "Seguimiento a OPs"
+    );
+});
+*/
+// Test DB
 $app->get('/test-db', function ($request, $response) {
     try {
         $clientes = $GLOBALS['db']->select("geclientes", ["codcli","nombrecli"]);
@@ -85,5 +133,11 @@ $app->get('/test-db', function ($request, $response) {
     return $response->withHeader('Content-Type', 'application/json');
 });
 
+// Logout
+$app->get('/logout', function ($request, $response, $args) {
+    session_destroy();
+    $response->getBody()->write("Sesión cerrada");
+    return $response;
+});
 
 $app->run();

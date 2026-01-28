@@ -11,8 +11,16 @@ class FichaTecnicaFotoModel {
     }
 
     public function byFicha($idFicha) {
-        return $this->db->select("ficha_tecnica_fotos", ["ruta_imagen"], [
+        return $this->db->select("ficha_tecnica_fotos", [
+            "id",
+            "ruta_imagen",
+            "id_ficha_tecnica"
+        ], [
             "id_ficha_tecnica" => $idFicha
         ]);
+    }
+
+    public function delete($id) {
+        return $this->db->delete("ficha_tecnica_fotos", ["id" => $id]);
     }
 }

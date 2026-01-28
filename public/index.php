@@ -33,14 +33,20 @@ $app->addErrorMiddleware(true, true, true);
 /**
  * Función auxiliar para renderizar vistas con layout
  */
-function renderView($response, $viewPath, $title) {
+
+function renderView($response, $viewPath, $title, $data = [])
+{
+    // Extraer el array $data para que las variables estén disponibles en la vista
+    extract($data); 
+    
     ob_start();
     include $viewPath;
     $content = ob_get_clean();
+    
+    // El layout también necesita el $title y el $content
     include __DIR__ . '/../src/Views/layouts/dashboard.php';
     return $response;
 }
-
 // ------------------- RUTAS ------------------- //
 
 // Ruta principal → Dashboard
@@ -53,22 +59,26 @@ $app->get('/', function ($request, $response, $args) {
 });
 
 // Fichas Técnicas
+
 $app->get('/fichas-tecnicas', function ($request, $response, $args) {
-    return renderView(
-        $response,
-        __DIR__ . '/../src/Views/fichas-tecnicas/index.php',
-        "Fichas Técnicas"
-    );
+    $controller = new FichaTecnicaController($GLOBALS['db']);
+    return $controller->index($request, $response);
 });
 
 $app->get('/fichas-tecnicas/create', function ($request, $response) {
-    // Pasar datos desde la DB
-    $productosBase = $GLOBALS['db']->select("inrefinv", ["codr","descr"]);
-    $clientes      = $GLOBALS['db']->select("geclientes", ["codcli","nombrecli"]);
-    $referencias   = $GLOBALS['db']->select("inrefinv", ["codr","descr"]);
+    // Datos reales desde la DB
+    $data = [
+        'productosBase' => $GLOBALS['db']->select("inrefinv", ["codr", "descr"]),
+        'clientes'      => $GLOBALS['db']->select("geclientes", ["codcli", "nombrecli"]),
+        'referencias'   => $GLOBALS['db']->select("inrefinv", ["codr", "descr"])
+    ];
 
-    require __DIR__ . '/../src/Views/fichas-tecnicas/create.php';
-    return $response;
+    return renderView(
+        $response,
+        __DIR__ . '/../src/Views/fichas-tecnicas/create.php',
+        "Nueva Ficha Técnica",
+        $data // Pasamos los datos aquí
+    );
 });
 
 $app->post('/fichas-tecnicas/store', function ($request, $response) {
@@ -125,7 +135,7 @@ $app->get('/seguimiento-op', function ($request, $response, $args) {
 // Test DB
 $app->get('/test-db', function ($request, $response) {
     try {
-        $clientes = $GLOBALS['db']->select("geclientes", ["codcli","nombrecli"]);
+        $clientes = $GLOBALS['db']->select("geclientes", ["codcli", "nombrecli"]);
         $response->getBody()->write(json_encode($clientes));
     } catch (Exception $e) {
         $response->getBody()->write("Error: " . $e->getMessage());

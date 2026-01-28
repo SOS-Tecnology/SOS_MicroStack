@@ -1,66 +1,55 @@
 <?php
 $title = "Fichas Técnicas";
-ob_start();
+// $fichas ya está disponible gracias al extract($data) en renderView
 ?>
 
-<!-- Botón para crear nueva ficha técnica -->
-<div class="flex justify-end mb-4">
+<div class="flex justify-between items-center mb-4">
+    <h2 class="text-xl font-bold text-gray-800 tracking-tight">Fichas Técnicas</h2>
     <a href="/fichas-tecnicas/create" 
-       class="bg-gradient-to-r from-blue-500 to-blue-700 text-white px-4 py-2 rounded-lg shadow hover:opacity-90 transition flex items-center">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path d="M12 4v16m8-8H4"/>
+       class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-md shadow-sm transition flex items-center text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
         </svg>
-        Nueva Ficha Técnica
+        Nueva Ficha
     </a>
 </div>
 
-<!-- Lista de fichas técnicas -->
-<div class="space-y-4">
-    <?php 
-    // Ejemplo de registros (en práctica vendrán de la BD)
-    $fichas = [
-        ["titulo" => "Ficha Técnica #001", "descripcion" => "Confección de camisa básica"],
-        ["titulo" => "Ficha Técnica #002", "descripcion" => "Producción de pantalón jean"],
-        ["titulo" => "Ficha Técnica #003", "descripcion" => "Alistamiento de chaqueta deportiva"],
-    ];
-
-    $colors = ["bg-gray-50", "bg-white"];
-    $i = 0;
-
-    foreach ($fichas as $ficha): 
-        $color = $colors[$i % 2]; 
-    ?>
-        <div class="<?= $color ?> shadow rounded-lg p-4 flex justify-between items-center">
-            <!-- Contenido -->
-            <div>
-                <h3 class="text-lg font-semibold text-gray-700"><?= $ficha['titulo'] ?></h3>
-                <p class="text-sm text-gray-500"><?= $ficha['descripcion'] ?></p>
-            </div>
-            <!-- Botones de acción -->
-            <div class="flex space-x-2">
-                <!-- Editar -->
-                <a href="/fichas-tecnicas/edit/<?= $i+1 ?>" 
-                   class="bg-green-500 text-white p-2 rounded-full hover:bg-green-600 transition" title="Editar">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M11 4h2m-1 1v14m-7-7h14"/>
-                    </svg>
-                </a>
-                <!-- Anular -->
-                <a href="/fichas-tecnicas/delete/<?= $i+1 ?>" 
-                   class="bg-red-500 text-white p-2 rounded-full hover:bg-red-600 transition" title="Anular">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </a>
-            </div>
+<div class="space-y-2">
+    <?php if (empty($fichas)): ?>
+        <div class="bg-white p-6 rounded-lg border border-dashed border-gray-300 text-center text-gray-500">
+            No se encontraron fichas técnicas.
         </div>
-    <?php 
-        $i++;
-    endforeach; 
-    ?>
-</div>
+    <?php else: ?>
+        <?php foreach ($fichas as $index => $ficha): ?>
+            <div class="<?= ($index % 2 == 0) ? 'bg-white' : 'bg-gray-50' ?> border border-gray-200 rounded-md px-4 py-2 flex justify-between items-center hover:shadow-sm transition-all">
+                
+                <div class="flex flex-col">
+                    <span class="text-sm font-bold text-gray-800">
+                        <?= htmlspecialchars($ficha['nombre_ficha']) ?>
+                    </span>
+                    <span class="text-xs text-gray-500">
+                        <span class="font-medium text-blue-500">Cliente:</span> 
+                        <?= htmlspecialchars($ficha['nombre_cliente'] ?? $ficha['id_cliente']) ?>
+                    </span>
+                </div>
 
-<?php
-$content = ob_get_clean();
-include __DIR__ . "/../layouts/dashboard.php";
-?>
+                <div class="flex items-center space-x-2">
+                    <a href="/fichas-tecnicas/edit/<?= $ficha['id'] ?>" 
+                       class="p-1.5 text-blue-600 hover:bg-blue-100 rounded-full transition" title="Editar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                    </a>
+
+                    <a href="/fichas-tecnicas/delete/<?= $ficha['id'] ?>" 
+                       onclick="return confirm('¿Está seguro de eliminar esta ficha?')"
+                       class="p-1.5 text-red-600 hover:bg-red-100 rounded-full transition" title="Eliminar">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </a>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>

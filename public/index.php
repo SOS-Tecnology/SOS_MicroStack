@@ -2,83 +2,69 @@
 session_start();
 
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../src/dependencies.php'; // conexión y dependencias
-
+require __DIR__ . '/../src/dependencies.php'; 
 
 use Slim\Factory\AppFactory;
 use Medoo\Medoo;
 use Dotenv\Dotenv;
 use App\Middleware\ValidationMiddleware;
 use App\Controllers\FichaTecnicaController;
+use App\Controllers\SateliteController;
 
-// Cargar variables de entorno
+// 1. Configuración del Entorno
 $dotenv = Dotenv::createImmutable(__DIR__ . "/..");
 $dotenv->load();
 
-// Inicializar conexión con Medoo usando .env
+// 2. Conexión Global a la Base de Datos
 $GLOBALS['db'] = new Medoo([
     'database_type' => $_ENV['DB_TYPE'],
     'database_name' => $_ENV['DB_NAME'],
-    'server'        => $_ENV['DB_HOST'],
-    'username'      => $_ENV['DB_USER'],
-    'password'      => $_ENV['DB_PASS'],
-    'charset'       => $_ENV['DB_CHARSET']
+    'server'         => $_ENV['DB_HOST'],
+    'username'       => $_ENV['DB_USER'],
+    'password'       => $_ENV['DB_PASS'],
+    'charset'        => $_ENV['DB_CHARSET']
 ]);
 
 $app = AppFactory::create();
-
-// Middleware de errores
 $app->addErrorMiddleware(true, true, true);
 
 /**
  * Función auxiliar para renderizar vistas con layout
  */
-
 function renderView($response, $viewPath, $title, $data = [])
 {
-    // Extraer el array $data para que las variables estén disponibles en la vista
-    extract($data); 
-    
+    extract($data);
     ob_start();
     include $viewPath;
     $content = ob_get_clean();
-    
-    // El layout también necesita el $title y el $content
     include __DIR__ . '/../src/Views/layouts/dashboard.php';
     return $response;
 }
-// ------------------- RUTAS ------------------- //
 
-// Ruta principal → Dashboard
-$app->get('/', function ($request, $response, $args) {
-    return renderView(
-        $response,
-        __DIR__ . '/../src/Views/dashboard_home.php',
-        "Dashboard"
-    );
+// ---------------------------------------------------------
+// RUTAS: GENERALES
+// ---------------------------------------------------------
+
+$app->get('/', function ($request, $response) {
+    return renderView($response, __DIR__ . '/../src/Views/dashboard_home.php', "Dashboard");
 });
 
-// Fichas Técnicas
+// ---------------------------------------------------------
+// RUTAS: FICHAS TÉCNICAS
+// ---------------------------------------------------------
 
-$app->get('/fichas-tecnicas', function ($request, $response, $args) {
+$app->get('/fichas-tecnicas', function ($request, $response) {
     $controller = new FichaTecnicaController($GLOBALS['db']);
     return $controller->index($request, $response);
 });
 
 $app->get('/fichas-tecnicas/create', function ($request, $response) {
-    // Datos reales desde la DB
     $data = [
         'productosBase' => $GLOBALS['db']->select("inrefinv", ["codr", "descr"]),
         'clientes'      => $GLOBALS['db']->select("geclientes", ["codcli", "nombrecli"]),
         'referencias'   => $GLOBALS['db']->select("inrefinv", ["codr", "descr"])
     ];
-
-    return renderView(
-        $response,
-        __DIR__ . '/../src/Views/fichas-tecnicas/create.php',
-        "Nueva Ficha Técnica",
-        $data // Pasamos los datos aquí
-    );
+    return renderView($response, __DIR__ . '/../src/Views/fichas-tecnicas/create.php', "Nueva Ficha Técnica", $data);
 });
 
 $app->post('/fichas-tecnicas/store', function ($request, $response) {
@@ -86,56 +72,92 @@ $app->post('/fichas-tecnicas/store', function ($request, $response) {
     return $controller->store($request, $response);
 })->add(new ValidationMiddleware());
 
-/*
-// Clientes
-$app->get('/clientes', function ($request, $response, $args) {
-    return renderView(
-        $response,
-        __DIR__ . '/../src/Views/clientes/index.php',
-        "Clientes"
-    );
+$app->get('/fichas-tecnicas/show/{id}', function ($request, $response, $args) {
+    $controller = new FichaTecnicaController($GLOBALS['db']);
+    return $controller->show($request, $response, $args);
 });
 
-// Satélites
-$app->get('/satelites', function ($request, $response, $args) {
-    return renderView(
-        $response,
-        __DIR__ . '/../src/Views/satelites/index.php',
-        "Manejo de Satélites"
-    );
+$app->get('/fichas-tecnicas/edit/{id}', function ($request, $response, $args) {
+    $controller = new FichaTecnicaController($GLOBALS['db']);
+    return $controller->edit($request, $response, $args);
 });
 
-// Orden de Pedido
-$app->get('/orden-pedido', function ($request, $response, $args) {
-    return renderView(
-        $response,
-        __DIR__ . '/../src/Views/orden-pedido/index.php',
-        "Orden de Pedido"
-    );
+$app->post('/fichas-tecnicas/update/{id}', function ($request, $response, $args) {
+    $controller = new FichaTecnicaController($GLOBALS['db']);
+    return $controller->update($request, $response, $args);
 });
 
-// Orden de Producción
-$app->get('/orden-produccion', function ($request, $response, $args) {
-    return renderView(
-        $response,
-        __DIR__ . '/../src/Views/orden-produccion/index.php',
-        "Orden de Producción"
-    );
+$app->post('/fichas-tecnicas/delete/{id}', function ($request, $response, $args) {
+    $controller = new FichaTecnicaController($GLOBALS['db']);
+    return $controller->delete($request, $response, $args);
 });
 
-// Seguimiento a OPs
-$app->get('/seguimiento-op', function ($request, $response, $args) {
-    return renderView(
-        $response,
-        __DIR__ . '/../src/Views/seguimiento-op/index.php',
-        "Seguimiento a OPs"
-    );
+// ---------------------------------------------------------
+// RUTAS: CONTROL DE SATELITES
+// ---------------------------------------------------------
+
+$app->get('/satelites', function ($request, $response) {
+    $controller = new SateliteController($GLOBALS['db']);
+    return $controller->index($request, $response);
 });
-*/
-// Test DB
+
+$app->get('/satelites/create', function ($request, $response) {
+    $controller = new SateliteController($GLOBALS['db']);
+    return $controller->create($request, $response);
+});
+
+$app->post('/satelites/store', function ($request, $response) {
+    $controller = new App\Controllers\SateliteController($GLOBALS['db']);
+    return $controller->store($request, $response);
+})->add(new App\Middleware\SateliteValidation()); // Agregamos la validación aquí
+
+$app->get('/satelites/show/{id}', function ($request, $response, $args) {
+    $controller = new SateliteController($GLOBALS['db']);
+    return $controller->show($request, $response, $args);
+});
+
+$app->get('/satelites/edit/{id}', function ($request, $response, $args) {
+    $controller = new SateliteController($GLOBALS['db']);
+    return $controller->edit($request, $response, $args);
+});
+
+$app->post('/satelites/update/{id}', function ($request, $response, $args) {
+    $controller = new SateliteController($GLOBALS['db']);
+    return $controller->update($request, $response, $args);
+});
+
+$app->post('/satelites/anular/{id}', function ($request, $response, $args) {
+    $controller = new SateliteController($GLOBALS['db']);
+    return $controller->anular($request, $response, $args);
+});
+
+// ---------------------------------------------------------
+// RUTAS: SISTEMA / ORDEN PEDIDO
+// ---------------------------------------------------------
+// Rutas Orden de Pedido
+
+$app->get('/orden-pedido', function ($request, $response) {
+    // Aquí es donde inyectamos el $GLOBALS['db'] al controlador
+    $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
+    return $controller->index($request, $response);
+});
+
+$app->get('/orden-pedido/create', function ($request, $response) {
+    $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
+    return $controller->create($request, $response);
+});
+
+$app->post('/orden-pedido/store', function ($request, $response) {
+    $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
+    return $controller->store($request, $response);
+});
+// ---------------------------------------------------------
+// RUTAS: SISTEMA / TEST
+// ---------------------------------------------------------
+
 $app->get('/test-db', function ($request, $response) {
     try {
-        $clientes = $GLOBALS['db']->select("geclientes", ["codcli", "nombrecli"]);
+        $clientes = $GLOBALS['db']->select("geclientes", ["codcli", "nombrecli"], ["LIMIT" => 10]);
         $response->getBody()->write(json_encode($clientes));
     } catch (Exception $e) {
         $response->getBody()->write("Error: " . $e->getMessage());
@@ -143,11 +165,9 @@ $app->get('/test-db', function ($request, $response) {
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-// Logout
-$app->get('/logout', function ($request, $response, $args) {
+$app->get('/logout', function ($request, $response) {
     session_destroy();
-    $response->getBody()->write("Sesión cerrada");
-    return $response;
+    return $response->withHeader('Location', '/')->withStatus(302);
 });
 
 $app->run();

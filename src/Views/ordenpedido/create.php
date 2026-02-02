@@ -68,6 +68,12 @@
                 <tbody class="divide-y divide-gray-100">
                 </tbody>
             </table>
+            <div class="p-4 bg-gray-50 border-t flex justify-end gap-8 text-sm font-bold">
+    <span>Total Ítems: <span id="totalItems">0</span></span>
+    <span>Total Cantidades: <span id="totalQty">0</span></span>
+    <span>Gran Total: <span id="grandTotal">$ 0.00</span></span>
+</div>
+
         </div>
 
         <div class="p-4 bg-white border-t">

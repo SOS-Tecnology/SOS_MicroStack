@@ -2,7 +2,7 @@
 session_start();
 
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../src/dependencies.php'; 
+require __DIR__ . '/../src/dependencies.php';
 
 use Slim\Factory\AppFactory;
 use Medoo\Medoo;
@@ -10,7 +10,7 @@ use Dotenv\Dotenv;
 use App\Middleware\ValidationMiddleware;
 use App\Controllers\FichaTecnicaController;
 use App\Controllers\SateliteController;
-
+use App\Http\Controllers\OrdenPedidoController;
 // 1. Configuración del Entorno
 $dotenv = Dotenv::createImmutable(__DIR__ . "/..");
 $dotenv->load();
@@ -151,6 +151,22 @@ $app->post('/orden-pedido/store', function ($request, $response) {
     $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
     return $controller->store($request, $response);
 });
+$app->get('/orden-pedido/show/{id}', function ($request, $response, $args) {
+    $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
+    return $controller->show($request, $response, $args);
+});
+
+$app->get('/orden-pedido/edit/{id}', function ($request, $response, $args) {
+    $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
+    return $controller->edit($request, $response, $args);
+});
+
+$app->post('/orden-pedido/update/{id}', function ($request, $response, $args) {
+    $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
+    return $controller->update($request, $response, $args);
+
+$app->get('/orden-pedido/pdf/{id}', [\App\Controllers\OrdenPedidoController::class, 'generarPdf']);
+});
 // ---------------------------------------------------------
 // RUTAS: SISTEMA / TEST
 // ---------------------------------------------------------
@@ -169,5 +185,26 @@ $app->get('/logout', function ($request, $response) {
     session_destroy();
     return $response->withHeader('Location', '/')->withStatus(302);
 });
+// Sucursales por cliente
+$app->get('/orden-pedido/sucursales/{codcli}', function ($request, $response, $args) {
+    $codcli = $args['codcli'];
+
+    try {
+        // Filtrar sucursales por cliente
+        $sucursales = $GLOBALS['db']->select("geclientesaux", [
+            "codsuc",
+            "nombresuc"
+        ], [
+            "codcli" => $codcli
+        ]);
+
+        $response->getBody()->write(json_encode($sucursales));
+        return $response->withHeader('Content-Type', 'application/json');
+    } catch (Exception $e) {
+        $response->getBody()->write(json_encode(["error" => $e->getMessage()]));
+        return $response->withStatus(500)->withHeader('Content-Type', 'application/json');
+    }
+});
+
 
 $app->run();

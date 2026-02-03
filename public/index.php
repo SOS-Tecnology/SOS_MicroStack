@@ -11,6 +11,8 @@ use App\Middleware\ValidationMiddleware;
 use App\Controllers\FichaTecnicaController;
 use App\Controllers\SateliteController;
 use App\Http\Controllers\OrdenPedidoController;
+
+
 // 1. Configuración del Entorno
 $dotenv = Dotenv::createImmutable(__DIR__ . "/..");
 $dotenv->load();
@@ -45,8 +47,100 @@ function renderView($response, $viewPath, $title, $data = [])
 // RUTAS: GENERALES
 // ---------------------------------------------------------
 
+
+// Ruta raíz: redirige según sesión
 $app->get('/', function ($request, $response) {
-    return renderView($response, __DIR__ . '/../src/Views/dashboard_home.php', "Dashboard");
+    if (isset($_SESSION['user'])) {
+        return $response->withHeader('Location', '/dashboard_home')->withStatus(302);
+    } else {
+        return $response->withHeader('Location', '/login')->withStatus(302);
+    }
+});
+
+// Login
+$app->get('/login', function ($request, $response) {
+    ob_start();
+    include __DIR__ . '/../src/Views/Auth/login.php';
+    $response->getBody()->write(ob_get_clean());
+    return $response;
+});
+
+$app->post('/login', function ($request, $response) {
+
+    $data = $request->getParsedBody();
+
+    $email    = trim($data['email'] ?? '');
+    $password = trim($data['password'] ?? '');
+
+    if ($email === '' || $password === '') {
+        $_SESSION['errors'] = ['Todos los campos son obligatorios'];
+        return $response->withHeader('Location', '/login')->withStatus(302);
+    }
+
+    $user = $GLOBALS['db']->get('users', '*', [
+        'email' => $email
+    ]);
+
+    if (!$user || !password_verify($password, $user['password'])) {
+        $_SESSION['errors'] = ['Credenciales incorrectas'];
+        return $response->withHeader('Location', '/login')->withStatus(302);
+    }
+
+    // Guardamos solo lo necesario
+    $_SESSION['user'] = [
+        'id'    => $user['id'],
+        'name'  => $user['name'],
+        'email' => $user['email'],
+    ];
+
+    return $response->withHeader('Location', '/dashboard_home')->withStatus(302);
+});
+
+$app->get('/logout', function ($request, $response) {
+    session_destroy();
+    return $response->withHeader('Location', '/login')->withStatus(302);
+});
+
+
+$app->get('/dashboard_home', function ($request, $response) {
+    if (!isset($_SESSION['user'])) {
+        return $response->withHeader('Location', '/login')->withStatus(302);
+    }
+
+    return renderView(
+        $response,
+        __DIR__ . '/../src/Views/dashboard_home.php',
+        'Dashboard'
+    );
+});
+
+
+// ----------------------------------------------------------
+// --- CRUD USUARIOS ---
+$app->get('/usuarios', function ($request, $response) use ($database) {
+    $usuarios = $database->select("users", "*");
+    ob_start();
+    include __DIR__ . '/../src/Views/Usuarios/index.php';
+    $response->getBody()->write(ob_get_clean());
+    return $response;
+});
+
+$app->get('/usuarios/create', function ($request, $response) {
+    ob_start();
+    include __DIR__ . '/../src/Views/Usuarios/create.php';
+    $response->getBody()->write(ob_get_clean());
+    return $response;
+});
+
+$app->post('/usuarios/store', function ($request, $response) use ($database) {
+    $data = $request->getParsedBody();
+    $database->insert("usuarios", [
+        "nombre" => $data['nombre'],
+        "email" => $data['email'],
+        "password" => password_hash($data['password'], PASSWORD_DEFAULT),
+        "rol" => $data['rol']
+    ]);
+    return $response->withHeader('Location', '/usuarios')->withStatus(302);
 });
 
 // ---------------------------------------------------------
@@ -181,10 +275,7 @@ $app->get('/test-db', function ($request, $response) {
     return $response->withHeader('Content-Type', 'application/json');
 });
 
-$app->get('/logout', function ($request, $response) {
-    session_destroy();
-    return $response->withHeader('Location', '/')->withStatus(302);
-});
+
 // Sucursales por cliente
 $app->get('/orden-pedido/sucursales/{codcli}', function ($request, $response, $args) {
     $codcli = $args['codcli'];

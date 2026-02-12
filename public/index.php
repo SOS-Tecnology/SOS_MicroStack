@@ -10,8 +10,8 @@ use Dotenv\Dotenv;
 use App\Middleware\ValidationMiddleware;
 use App\Controllers\FichaTecnicaController;
 use App\Controllers\SateliteController;
-use App\Http\Controllers\OrdenPedidoController;
-
+use App\Controllers\OrdenPedidoController;
+use App\Controllers\OrdenProdController;
 
 // 1. Configuración del Entorno
 $dotenv = Dotenv::createImmutable(__DIR__ . "/..");
@@ -259,7 +259,7 @@ $app->post('/orden-pedido/update/{id}', function ($request, $response, $args) {
     $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
     return $controller->update($request, $response, $args);
 
-$app->get('/orden-pedido/pdf/{id}', [\App\Controllers\OrdenPedidoController::class, 'generarPdf']);
+    $app->get('/orden-pedido/pdf/{id}', [\App\Controllers\OrdenPedidoController::class, 'generarPdf']);
 });
 // ---------------------------------------------------------
 // RUTAS: SISTEMA / TEST
@@ -297,5 +297,29 @@ $app->get('/orden-pedido/sucursales/{codcli}', function ($request, $response, $a
     }
 });
 
+// ORDENES DE PRODUCCION
+// Rutas Orden de Producción (OPR)
+// var_dump(class_exists(\App\Controllers\OrdenProdController::class));
+// exit;
+$app->get('/orden-produccion', function ($request, $response) {
+    // Aquí es donde inyectamos el $GLOBALS['db'] al controlador
+    $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
+    return $controller->index($request, $response);
+});
+$app->get('/orden-produccion/create/{documento}', function ($request, $response, $args) {
+    $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
+    return $controller->create($request, $response, $args);
+});
+
+$app->post('/orden-produccion/store/{documento}', function ($request, $response, $args) {
+    $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
+    return $controller->store($request, $response, $args);
+});
+
+
+$app->get('/seguimiento-opr', function ($request, $response, $args) {
+    $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
+    return $controller->seguimiento($request, $response, $args);
+});
 
 $app->run();

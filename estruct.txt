@@ -1,0 +1,171 @@
+ El volumen de la unidad D es Nuevo vol
+ El n£mero de serie del volumen es: 3C58-BF36
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\public
+
+26/01/2026  21:26    <DIR>          .
+12/02/2026  19:38    <DIR>          ..
+25/01/2026  15:55    <DIR>          css
+12/02/2026  19:14            12,657 index.php
+26/01/2026  21:26    <DIR>          uploads
+               1 archivos         12,657 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\public\css
+
+25/01/2026  15:55    <DIR>          .
+26/01/2026  21:26    <DIR>          ..
+25/01/2026  15:54                88 app.css
+02/02/2026  21:29             1,261 dashboard.css
+               2 archivos          1,349 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\public\uploads
+
+26/01/2026  21:26    <DIR>          .
+26/01/2026  21:26    <DIR>          ..
+03/02/2026  08:52    <DIR>          fichas
+               0 archivos              0 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\public\uploads\fichas
+
+03/02/2026  08:52    <DIR>          .
+26/01/2026  21:26    <DIR>          ..
+27/01/2026  19:42            21,639 69795b670f5ec_actualizar.jpg
+03/02/2026  08:52            47,020 6981fdb1ecd02_ad aware icon.png
+               2 archivos         68,659 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src
+
+24/01/2026  14:52    <DIR>          .
+12/02/2026  19:38    <DIR>          ..
+24/01/2026  14:52    <DIR>          App
+05/02/2026  22:08    <DIR>          Controllers
+24/01/2026  15:05               383 dependencies.php
+28/01/2026  17:57    <DIR>          Middleware
+12/02/2026  17:22    <DIR>          Models
+02/02/2026  14:50    <DIR>          Routes
+05/02/2026  15:52    <DIR>          Views
+               1 archivos            383 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\App
+
+24/01/2026  14:52    <DIR>          .
+24/01/2026  14:52    <DIR>          ..
+               0 archivos              0 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Controllers
+
+05/02/2026  22:08    <DIR>          .
+24/01/2026  14:52    <DIR>          ..
+02/02/2026  14:51             1,996 AuthController.php
+27/01/2026  20:31            10,165 FichaTecnicaController.php
+30/01/2026  20:39            10,950 OrdenPedidoController.php
+12/02/2026  17:27             7,408 OrdenProdController.php
+05/02/2026  20:38             1,734 OrdenProdController_r1.php
+28/01/2026  17:59             4,904 SateliteController.php
+               6 archivos         37,157 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Middleware
+
+28/01/2026  17:57    <DIR>          .
+24/01/2026  14:52    <DIR>          ..
+28/01/2026  17:57             1,125 SateliteValidation.php
+23/01/2026  20:49               928 ValidationMiddleware.php
+               2 archivos          2,053 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Models
+
+12/02/2026  17:22    <DIR>          .
+24/01/2026  14:52    <DIR>          ..
+26/01/2026  21:32               823 FichaTecnicaDetalleModel.php
+26/01/2026  21:32               656 FichaTecnicaFotoModel.php
+26/01/2026  21:32               755 FichaTecnicaModel.php
+12/02/2026  19:12             1,202 OprModel.php
+               4 archivos          3,436 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Routes
+
+02/02/2026  14:50    <DIR>          .
+24/01/2026  14:52    <DIR>          ..
+02/02/2026  14:50               288 auth.php
+23/01/2026  19:35               350 fichas-tecnicas.php
+               2 archivos            638 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Views
+
+05/02/2026  15:52    <DIR>          .
+24/01/2026  14:52    <DIR>          ..
+03/02/2026  08:55    <DIR>          Auth
+11/02/2026  20:27             4,906 dashboard_home.php
+27/01/2026  20:23    <DIR>          fichas-tecnicas
+02/02/2026  21:33    <DIR>          layouts
+12/02/2026  16:33    <DIR>          orden-produccion
+30/01/2026  20:40    <DIR>          ordenpedido
+27/01/2026  21:07    <DIR>          Satelites
+01/02/2026  20:25    <DIR>          Usuarios
+               1 archivos          4,906 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Views\Auth
+
+03/02/2026  08:55    <DIR>          .
+05/02/2026  15:52    <DIR>          ..
+02/02/2026  21:16             2,571 login.php
+               1 archivos          2,571 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Views\fichas-tecnicas
+
+27/01/2026  20:23    <DIR>          .
+05/02/2026  15:52    <DIR>          ..
+26/01/2026  21:28            15,263 create.php
+27/01/2026  20:12            13,623 edit.php
+24/01/2026  15:37             7,597 form.php
+27/01/2026  20:44             6,162 index.php
+27/01/2026  20:26             7,484 show.php
+               5 archivos         50,129 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Views\layouts
+
+02/02/2026  21:33    <DIR>          .
+05/02/2026  15:52    <DIR>          ..
+02/02/2026  21:34               431 auth.php
+11/02/2026  18:19             5,442 dashboard.php
+               2 archivos          5,873 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Views\orden-produccion
+
+12/02/2026  16:33    <DIR>          .
+05/02/2026  15:52    <DIR>          ..
+11/02/2026  19:55             4,529 create.php
+06/02/2026  15:56             1,839 create_V1.php
+11/02/2026  18:37             3,932 index.php
+12/02/2026  16:42             4,787 seguimiento.php
+12/02/2026  19:25             1,739 ver.php
+               5 archivos         16,826 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Views\ordenpedido
+
+30/01/2026  20:40    <DIR>          .
+05/02/2026  15:52    <DIR>          ..
+30/01/2026  18:14            11,166 create.php
+30/01/2026  20:27            15,021 edit.php
+30/01/2026  18:47             5,000 index.php
+30/01/2026  20:41             4,370 pdf_template.php
+30/01/2026  20:38             7,506 show.php
+               5 archivos         43,063 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Views\Satelites
+
+27/01/2026  21:07    <DIR>          .
+05/02/2026  15:52    <DIR>          ..
+28/01/2026  18:09             6,710 create.php
+28/01/2026  18:09             4,285 edit.php
+27/01/2026  21:16             7,826 index.php
+28/01/2026  18:12             4,719 show.php
+               4 archivos         23,540 bytes
+
+ Directorio de D:\Desarrollo_web\DyDdotaciones\SOS_MicroStack\src\Views\Usuarios
+
+01/02/2026  20:25    <DIR>          .
+05/02/2026  15:52    <DIR>          ..
+01/02/2026  20:25               739 index.php
+               1 archivos            739 bytes
+

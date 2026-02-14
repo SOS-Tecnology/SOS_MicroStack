@@ -1,13 +1,20 @@
 <div class="max-w-7xl mx-auto text-gray-800">
     <div class="flex justify-between items-center mb-6">
+
+        <a href="/dashboard_home"
+            class="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg shadow">
+            ← Volver
+        </a>
+
         <h2 class="text-2xl font-bold text-gray-700">
             Seguimiento OPR
         </h2>
 
-        <a href="/orden-produccion/create"
+        <!-- <a href="/orden-produccion/create"
             class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg shadow">
             + Nueva OPR
-        </a>
+        </a> -->
+
     </div>
 
     <div class="bg-white shadow-lg rounded-2xl overflow-hidden">

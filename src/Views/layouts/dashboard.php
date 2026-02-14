@@ -31,7 +31,8 @@
 </head>
 
 <!-- <body class="min-h-screen flex flex-col bg-slate-100 text-slate-800"> -->
-<body class="min-h-screen flex flex-col bg-gradient-to-r from-gray-400 via-gray-350 to-gray-300 text-white">
+
+<body class="min-h-screen flex flex-col bg-gradient-to-r from-gray-100 via-gray-200 to-gray-300 text-gray-800">
 
     <header class="bg-gray-600 border-b border-gray-200 shadow-sm text-white">
 

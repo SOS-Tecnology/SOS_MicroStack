@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
+use App\Models\OprModel;
 
 class OrdenProdController
 {
@@ -236,5 +237,52 @@ public function seguimiento(Request $request, Response $response, array $args)
         ]
     );
 }
+public function ver($request, $response, $args)
+{
+    $documento = $args['documento'];
+
+    // 1. CABECERA con cliente
+    $opr = $this->db->get("cabezamov", [
+        "[>]geclientes" => ["codcp" => "codcli"]
+    ], [
+        "cabezamov.documento",
+        "cabezamov.prefijo",
+        "cabezamov.fecha",
+        "cabezamov.fechent",
+        "cabezamov.comen",
+        "cabezamov.estado",
+        "geclientes.nombrecli(cliente)"
+    ], [
+        "cabezamov.documento" => $documento,
+        "cabezamov.tm" => "OPR"
+    ]);
+
+    // 2. DETALLE con producto
+    $detalles = $this->db->select("cuerpomov", [
+        "[>]inrefinv" => ["codr" => "codr"]
+    ], [
+        "cuerpomov.codr",
+        "inrefinv.descr(producto_nombre)",
+        "cuerpomov.codtalla",
+        "cuerpomov.codcolor",
+        "cuerpomov.cantidad",
+        "cuerpomov.item"
+    ], [
+        "cuerpomov.documento" => $documento,
+        "cuerpomov.tm" => "OPR"
+    ]);
+
+    return renderView(
+        $response,
+        __DIR__ . '/../Views/orden-produccion/ver.php',
+        "OPR #" . $documento,
+        [
+            'opr' => $opr,
+            'detalles' => $detalles
+        ]
+    );
+}
+
+
 
 }

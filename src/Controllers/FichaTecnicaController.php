@@ -36,6 +36,8 @@ class FichaTecnicaController
             'tiempo_confeccion'  => $data['tiempo_confeccion'],
             'tiempo_alistamiento' => $data['tiempo_alistamiento'],
             'tiempo_remate'      => $data['tiempo_remate'],
+            'user_create'        => $_SESSION['user']['name'] ?? 'system',
+            'user_update'        => $_SESSION['user']['name'] ?? 'system',
             'created_at'         => date('Y-m-d H:i:s'),
             'updated_at'         => date('Y-m-d H:i:s')
         ]);
@@ -84,8 +86,24 @@ class FichaTecnicaController
             }
         }
 
+        // ==========================================
+        // 4. GUARDAR PROCESOS DE FABRICACIÓN
+        // ==========================================
+        if (!empty($data['procesos'])) {
 
+            foreach ($data['procesos'] as $i => $proc) {
 
+                if (empty($proc['proceso_id'])) continue;
+
+                $this->db->insert("ficha_tecnica_procesos", [
+                    "id_ficha_tecnica" => $idFicha,   // 👈 tu variable real
+                    "proceso_id"       => $proc['proceso_id'],
+                    "tiempo_minutos"   => $proc['tiempo'],
+                    "comentario"       => $proc['comentario'],
+                    "orden"            => $i
+                ]);
+            }
+        }
 
         return $response
             ->withHeader('Location', '/fichas-tecnicas')
@@ -158,6 +176,7 @@ class FichaTecnicaController
             "tiempo_confeccion"  => $data['tiempo_confeccion'],
             "tiempo_alistamiento" => $data['tiempo_alistamiento'],
             "tiempo_remate"      => $data['tiempo_remate'],
+            "user_update" => $_SESSION['user']['name'] ?? 'system',
             "updated_at"         => date('Y-m-d H:i:s')
         ], ["id" => $idFicha]);
 
@@ -195,6 +214,27 @@ class FichaTecnicaController
                         'created_at'       => date('Y-m-d H:i:s')
                     ]);
                 }
+            }
+        }
+        // eliminar procesos anteriores
+        $this->db->delete("ficha_tecnica_procesos", [
+            "id_ficha_tecnica" => $idFicha
+        ]);
+
+        // volver a insertar
+        if (!empty($data['procesos'])) {
+
+            foreach ($data['procesos'] as $i => $proc) {
+
+                if (empty($proc['proceso_id'])) continue;
+
+                $this->db->insert("ficha_tecnica_procesos", [
+                    "id_ficha_tecnica" => $idFicha,
+                    "proceso_id"       => $proc['proceso_id'],
+                    "tiempo_minutos"   => $proc['tiempo'],
+                    "comentario"       => $proc['comentario'],
+                    "orden"            => $i
+                ]);
             }
         }
 
@@ -258,4 +298,37 @@ class FichaTecnicaController
 
         return $response->withHeader('Location', '/fichas-tecnicas')->withStatus(302);
     }
+public function create($request, $response)
+{
+    // 🔹 1. Traer datos para selects (igual que hacías en index.php)
+    // die("ENTRÉ AL CONTROLLER CREATE");
+    //echo "ANTES DEL RENDER";
+    //exit;
+    $productosBase = $this->db->select("inrefinv", ["codr", "descr", "unid"]);
+    $clientes      = $this->db->select("geclientes", ["codcli", "nombrecli"]);
+    $referencias   = $this->db->select("inrefinv", ["codr", "descr", "unid"]);
+
+    // 🔹 2. Traer procesos desde catalogo procesos_ft
+    $procesosCatalogo = $this->db->select("procesos_ft", [
+        "id",
+        "nombre"
+    ], [
+        "activo" => 1,
+        "ORDER" => ["nombre" => "ASC"]
+    ]);
+
+    // 🔹 3. Renderizar vista con TODA la data
+    return renderView(
+        $response,
+        __DIR__ . '/../Views/fichas-tecnicas/create.php',
+        "Nueva Ficha Técnica",
+        [
+            'productosBase' => $productosBase,
+            'clientes'      => $clientes,
+            'referencias'   => $referencias,
+            'procesosCatalogo' => $procesosCatalogo
+        ]
+    );
+}
+
 }

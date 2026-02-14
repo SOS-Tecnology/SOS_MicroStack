@@ -12,6 +12,7 @@ use App\Controllers\FichaTecnicaController;
 use App\Controllers\SateliteController;
 use App\Controllers\OrdenPedidoController;
 use App\Controllers\OrdenProdController;
+use App\Models\OprModel;
 
 // 1. Configuración del Entorno
 $dotenv = Dotenv::createImmutable(__DIR__ . "/..");
@@ -29,6 +30,11 @@ $GLOBALS['db'] = new Medoo([
 
 $app = AppFactory::create();
 $app->addErrorMiddleware(true, true, true);
+
+
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 /**
  * Función auxiliar para renderizar vistas con layout
@@ -152,14 +158,19 @@ $app->get('/fichas-tecnicas', function ($request, $response) {
     return $controller->index($request, $response);
 });
 
+// $app->get('/fichas-tecnicas/create', function ($request, $response) {
+//     $data = [
+//         'productosBase' => $GLOBALS['db']->select("inrefinv", ["codr", "descr"]),
+//         'clientes'      => $GLOBALS['db']->select("geclientes", ["codcli", "nombrecli"]),
+//         'referencias'   => $GLOBALS['db']->select("inrefinv", ["codr", "descr"])
+//     ];
+//     return renderView($response, __DIR__ . '/../src/Views/fichas-tecnicas/create.php', "Nueva Ficha Técnica", $data);
+// });
 $app->get('/fichas-tecnicas/create', function ($request, $response) {
-    $data = [
-        'productosBase' => $GLOBALS['db']->select("inrefinv", ["codr", "descr"]),
-        'clientes'      => $GLOBALS['db']->select("geclientes", ["codcli", "nombrecli"]),
-        'referencias'   => $GLOBALS['db']->select("inrefinv", ["codr", "descr"])
-    ];
-    return renderView($response, __DIR__ . '/../src/Views/fichas-tecnicas/create.php', "Nueva Ficha Técnica", $data);
+    $controller = new FichaTecnicaController($GLOBALS['db']);
+    return $controller->create($request, $response);
 });
+
 
 $app->post('/fichas-tecnicas/store', function ($request, $response) {
     $controller = new FichaTecnicaController($GLOBALS['db']);
@@ -321,5 +332,13 @@ $app->get('/seguimiento-opr', function ($request, $response, $args) {
     $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
     return $controller->seguimiento($request, $response, $args);
 });
+
+
+
+$app->get('/orden-produccion/ver/{documento}', function ($request, $response, $args) {
+    $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
+    return $controller->ver($request, $response, $args);
+});
+
 
 $app->run();

@@ -17,6 +17,7 @@ class FichaTecnicaDetalleModel {
         ], [
             "ficha_tecnica_detalles.codr",
             "inrefinv.descr",
+            "inrefinv.unid",
             "ficha_tecnica_detalles.cantidad",
             "ficha_tecnica_detalles.talla",
             "ficha_tecnica_detalles.color"

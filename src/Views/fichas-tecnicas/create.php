@@ -150,39 +150,49 @@
         width: '100%'
     });
 
-    let indexProceso = 0;
+let indexProceso = 0;
 
-    function agregarProceso() {
+function agregarProceso() {
 
-        let fila = `
+    let fila = `
     <tr>
         <td>
-            <select name="procesos[0][proceso_id]" class="w-48 border p-1 rounded">
+            <select name="procesos[${indexProceso}][proceso_id]" class="w-48 border p-1 rounded">
                 <option value="">-- Seleccionar proceso --</option>
                 <?php foreach ($procesosCatalogo as $p): ?>
                     <option value="<?= $p['id'] ?>"><?= $p['nombre'] ?></option>
                 <?php endforeach; ?>
             </select>
+        </td>
 
-        </td>
         <td>
-            <input type="number" step="1" name="procesos[${indexProceso}][tiempo]"
+            <input type="number" step="1"
+                name="procesos[${indexProceso}][tiempo]"
                 class="w-full border rounded p-1">
         </td>
+
         <td>
-            <input type="text" name="procesos[${indexProceso}][comentario]"
+            <input type="text"
+                name="procesos[${indexProceso}][comentario]"
                 class="w-full border rounded p-1">
         </td>
+
         <td>
             <button type="button" onclick="this.closest('tr').remove()">❌</button>
         </td>
     </tr>
     `;
 
-        $('#tablaProcesos tbody').append(fila);
-        $('.select2').select2();
-        indexProceso++;
-    }
+    $('#tablaProcesos tbody').append(fila);
+
+    // 🔹 importante reactivar select2 solo en el último
+    $('#tablaProcesos tbody tr:last select').select2({
+        width: '100%'
+    });
+
+    indexProceso++;
+}
+
 
 
     let indexInsumo = 0;
@@ -240,26 +250,26 @@
         indexInsumo++;
     }
 
-let archivosFotos = [];
+    let archivosFotos = [];
 
-$('input[name="fotos[]"]').on('change', function(e) {
+    $('input[name="fotos[]"]').on('change', function(e) {
 
-    // agregar nuevos archivos al arreglo
-    for (let file of e.target.files) {
-        archivosFotos.push(file);
-    }
+        // agregar nuevos archivos al arreglo
+        for (let file of e.target.files) {
+            archivosFotos.push(file);
+        }
 
-    // limpiar preview
-    $('#previewFotos').html('');
+        // limpiar preview
+        $('#previewFotos').html('');
 
-    // volver a pintar TODOS los archivos acumulados
-    archivosFotos.forEach((file, index) => {
+        // volver a pintar TODOS los archivos acumulados
+        archivosFotos.forEach((file, index) => {
 
-        let reader = new FileReader();
+            let reader = new FileReader();
 
-        reader.onload = function(ev) {
+            reader.onload = function(ev) {
 
-            $('#previewFotos').append(`
+                $('#previewFotos').append(`
                 <div class="relative">
                     <img src="${ev.target.result}" 
                         class="w-24 h-24 object-cover rounded border">
@@ -271,22 +281,23 @@ $('input[name="fotos[]"]').on('change', function(e) {
                     </button>
                 </div>
             `);
-        }
+            }
 
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        });
+
     });
 
-});
-function eliminarFoto(index) {
-    archivosFotos.splice(index, 1);
+    function eliminarFoto(index) {
+        archivosFotos.splice(index, 1);
 
-    $('#previewFotos').html('');
+        $('#previewFotos').html('');
 
-    archivosFotos.forEach((file, i) => {
-        let reader = new FileReader();
+        archivosFotos.forEach((file, i) => {
+            let reader = new FileReader();
 
-        reader.onload = function(ev) {
-            $('#previewFotos').append(`
+            reader.onload = function(ev) {
+                $('#previewFotos').append(`
                 <div class="relative">
                     <img src="${ev.target.result}" 
                         class="w-24 h-24 object-cover rounded border">
@@ -298,22 +309,29 @@ function eliminarFoto(index) {
                     </button>
                 </div>
             `);
-        }
+            }
 
-        reader.readAsDataURL(file);
+            reader.readAsDataURL(file);
+        });
+    }
+    $('form').on('submit', function(e) {
+
+        let input = document.querySelector('input[name="fotos[]"]');
+
+        let dt = new DataTransfer();
+
+        archivosFotos.forEach(file => dt.items.add(file));
+
+        input.files = dt.files;
+
     });
-}
-$('form').on('submit', function(e) {
 
-    let input = document.querySelector('input[name="fotos[]"]');
-
-    let dt = new DataTransfer();
-
-    archivosFotos.forEach(file => dt.items.add(file));
-
-    input.files = dt.files;
-
+$('form').on('keydown', function(e) {
+    if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+    }
 });
+
 
 </script>
 

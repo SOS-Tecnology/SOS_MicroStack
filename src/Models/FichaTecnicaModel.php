@@ -21,7 +21,8 @@ class FichaTecnicaModel
             "fichas_tecnicas.nombre_ficha",
             "fichas_tecnicas.id_cliente",
             "geclientes.nombrecli(nombre_cliente)"
-        ]);
+        ],
+        ["ORDER" => ["fichas_tecnicas.id" => "DESC"]]);
     }
 
     public function find($id)

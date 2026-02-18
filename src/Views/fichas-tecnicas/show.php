@@ -1,124 +1,173 @@
-<?php
-$title = "Consulta: " . htmlspecialchars($ficha['nombre_ficha']);
-?>
+<div class="max-w-6xl mx-auto bg-white shadow rounded-xl p-6">
 
-<div class="max-w-5xl mx-auto">
-    <div class="flex justify-between items-center mb-6 no-print">
-        <a href="/fichas-tecnicas" class="flex items-center text-gray-600 hover:text-blue-600 transition">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Volver al listado
-        </a>
-        <div class="flex space-x-2">
-            <button onclick="window.print()" class="bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-bold flex items-center hover:bg-black transition">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v2" />
-                </svg>
-                Imprimir Ficha
+    <div class="bg-gray-50 border-b p-6 flex justify-between items-start">
+
+        <!-- IZQUIERDA -->
+        <div>
+            <button onclick="window.print()"
+                class="bg-gray-800 text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-black transition">
+                🖨 Imprimir
             </button>
-            <a href="/fichas-tecnicas/edit/<?= $ficha['id'] ?>" class="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-bold hover:bg-blue-700 transition">
-                Editar Datos
-            </a>
+
+            <!-- BOTÓN VOLVER -->
+            <div class="mb-2">
+                <a href="/fichas-tecnicas"
+                    class="inline-flex items-center text-xs text-gray-500 hover:text-black border px-2 py-1 rounded">
+                    ← Volver
+                </a>
+            </div>
+
+            <!-- NOMBRE FICHA -->
+            <h1 class="text-3xl font-extrabold text-gray-900 leading-tight uppercase">
+                <?= htmlspecialchars($ficha['nombre_ficha']) ?>
+            </h1>
+
+            <!-- CLIENTE -->
+            <p class="text-blue-600 font-bold tracking-widest text-sm mt-1">
+                CLIENTE: <?= htmlspecialchars($ficha['nombre_cliente'] ?? 'N/A') ?>
+            </p>
+
+            <p class="text-sm text-gray-600 mt-1">
+                Producto base:
+                <span class="font-semibold">
+                    <?= htmlspecialchars($ficha['producto_codigo'] ?? '') ?>
+                    - <?= htmlspecialchars($ficha['producto_descr'] ?? '') ?>
+                </span>
+            </p>
+
+
+            <!-- FECHA CREACIÓN -->
+            <p class="text-xs text-gray-400 mt-1">
+                Creado: <?= htmlspecialchars($ficha['created_at'] ?? '') ?>
+            </p>
+
+            <!-- COMENTARIOS -->
+            <?php if (!empty($ficha['adicionales'])): ?>
+                <div class="mt-3 text-xs bg-yellow-50 border border-yellow-200 p-2 rounded text-gray-700 italic">
+                    <?= nl2br(htmlspecialchars($ficha['adicionales'])) ?>
+                </div>
+            <?php endif; ?>
         </div>
+
+        <!-- DERECHA: DOCUMENTO -->
+        <div class="text-right">
+            <span class="text-xs text-gray-400 uppercase font-bold block">
+                Ficha Técnica
+            </span>
+
+            <span class="text-3xl font-mono text-gray-800">
+                #<?= str_pad($ficha['id'], 6, "0", STR_PAD_LEFT) ?>
+            </span>
+        </div>
+
     </div>
 
-    <div class="bg-white border shadow-lg rounded-lg overflow-hidden">
-        <div class="bg-gray-50 border-b p-6 flex justify-between items-start">
-            <div>
-                <h1 class="text-3xl font-extrabold text-gray-900 leading-tight uppercase"><?= htmlspecialchars($ficha['nombre_ficha']) ?></h1>
-                <p class="text-blue-600 font-bold tracking-widest text-sm mt-1">CLIENTE: <?= htmlspecialchars($ficha['nombre_cliente'] ?? 'N/A') ?></p>
-            </div>
-            <div class="text-right">
-                <span class="text-xs text-gray-400 uppercase font-bold block">ID Ficha</span>
-                <span class="text-2xl font-mono text-gray-800">#<?= str_pad($ficha['id'], 5, "0", STR_PAD_LEFT) ?></span>
-            </div>
+
+    <!-- INSUMOS -->
+    <h2 class="font-bold text-lg mb-2">Materia Prima / Insumos</h2>
+
+    <table class="w-full text-sm mb-6">
+        <thead class="bg-gray-200">
+            <tr>
+                <th>Referencia</th>
+                <th>Unidad</th>
+                <th>Cantidad</th>
+                <th>Color</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($insumos as $i): ?>
+                <tr>
+                    <td><?= $i['codr'] ?> - <?= $i['descr'] ?></td>
+                    <td><?= $i['unid'] ?></td>
+                    <td><?= $i['cantidad'] ?></td>
+                    <td><?= $i['color'] ?></td>
+                </tr>
+            <?php endforeach; ?>
+        </tbody>
+    </table>
+    <!-- PROCESOS -->
+    <h2 class="font-bold text-lg mb-2">Procesos de Fabricación</h2>
+
+    <table class="w-full text-sm">
+        <thead class="bg-gray-200">
+            <tr>
+                <th>Proceso</th>
+                <th>Tiempo</th>
+                <th>Comentario</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php foreach ($procesos as $proc): ?>
+                <tr class="border-t">
+                    <td class="p-2 font-semibold text-gray-700">
+                        <?= htmlspecialchars($proc['nombre_proceso']) ?>
+                    </td>
+                    <td class="text-center">
+                        <?= (int)$proc['tiempo_minutos'] ?> min
+                    </td>
+                    <td class="text-gray-600 text-sm">
+                        <?= htmlspecialchars($proc['comentario'] ?? '') ?>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+
+        </tbody>
+    </table>
+    <!-- FOTOS -->
+
+    <section>
+        <h3 class="text-xs font-black text-gray-400 uppercase border-b mb-4 text-right">
+            Galería de Referencia
+        </h3>
+
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <?php foreach ($fotos ?? [] as $f): ?>
+                <div class="border rounded-lg overflow-hidden bg-gray-50 h-28 flex items-center justify-center">
+                    <img
+                        src="/<?= $f['ruta_imagen'] ?>"
+                        class="object-contain w-full h-full cursor-pointer hover:scale-105 transition"
+                        onclick="openImageModal(this.src)">
+                </div>
+            <?php endforeach; ?>
         </div>
+    </section>
 
-        <div class="p-6 grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div class="md:col-span-1 space-y-6">
-                <section>
-                    <h3 class="text-xs font-black text-gray-400 uppercase border-b mb-3">Tiempos de Producción</h3>
-                    <div class="space-y-2">
-                        <?php 
-                        $tiempos = [
-                            'Corte' => $ficha['tiempo_corte'],
-                            'Confección' => $ficha['tiempo_confeccion'],
-                            'Alistamiento' => $ficha['tiempo_alistamiento'],
-                            'Remate' => $ficha['tiempo_remate']
-                        ];
-                        $total = array_sum($tiempos);
-                        foreach($tiempos as $label => $valor): ?>
-                            <div class="flex justify-between text-sm">
-                                <span class="text-gray-600"><?= $label ?>:</span>
-                                <span class="font-bold text-gray-800"><?= number_format($valor, 2) ?> min</span>
-                            </div>
-                        <?php endforeach; ?>
-                        <div class="flex justify-between text-base border-t pt-2 mt-2 font-black text-blue-800">
-                            <span>TOTAL:</span>
-                            <span><?= number_format($total, 2) ?> min</span>
-                        </div>
-                    </div>
-                </section>
 
-                <section>
-                    <h3 class="text-xs font-black text-gray-400 uppercase border-b mb-3">Observaciones</h3>
-                    <p class="text-sm text-gray-700 italic bg-yellow-50 p-3 rounded border border-yellow-100">
-                        <?= !empty($ficha['adicionales']) ? nl2br(htmlspecialchars($ficha['adicionales'])) : 'Sin observaciones adicionales.' ?>
-                    </p>
-                </section>
-            </div>
+    <!-- MODAL -->
+    <div id="visorImagen" class="fixed inset-0 bg-black bg-opacity-80 hidden items-center justify-center z-50">
+        <img id="imgGrande" class="max-h-[90%] max-w-[90%] rounded shadow-2xl">
+    </div>
 
-            <div class="md:col-span-2 space-y-8">
-                <section>
-                    <h3 class="text-xs font-black text-gray-400 uppercase border-b mb-4 tracking-tighter text-right">Insumos y Referencias Requeridas</h3>
-                    <div class="overflow-hidden border rounded-lg">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-4 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Referencia</th>
-                                    <th class="px-4 py-2 text-center text-[10px] font-bold text-gray-500 uppercase">Cant</th>
-                                    <th class="px-4 py-2 text-center text-[10px] font-bold text-gray-500 uppercase">Talla</th>
-                                    <th class="px-4 py-2 text-left text-[10px] font-bold text-gray-500 uppercase">Color</th>
-                                </tr>
-                            </thead>
-                            <tbody class="bg-white divide-y divide-gray-100">
-                                <?php foreach($detalles as $det): ?>
-                                <tr class="hover:bg-gray-50 transition">
-                                    <td class="px-4 py-3 text-xs">
-                                        <div class="font-bold text-gray-900"><?= $det['codr'] ?></div>
-                                        <div class="text-[10px] text-gray-500"><?= htmlspecialchars($det['descr']) ?></div>
-                                    </td>
-                                    <td class="px-4 py-3 text-xs text-center font-mono font-bold"><?= $det['cantidad'] ?></td>
-                                    <td class="px-4 py-3 text-xs text-center uppercase"><?= $det['talla'] ?></td>
-                                    <td class="px-4 py-3 text-xs uppercase font-medium text-gray-600"><?= $det['color'] ?></td>
-                                </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                </section>
+</div>
+<script>
+    function abrirImagen(src) {
+        document.getElementById('imgGrande').src = src;
+        document.getElementById('visorImagen').classList.remove('hidden');
+    }
 
-                <section>
-                    <h3 class="text-xs font-black text-gray-400 uppercase border-b mb-4 text-right">Galería de Referencia</h3>
-                    <div class="grid grid-cols-2 gap-4">
-                        <?php foreach($fotos as $f): ?>
-                        <div class="border rounded-md overflow-hidden bg-gray-100 h-48 group">
-                            <img src="/<?= $f['ruta_imagen'] ?>" class="w-full h-full object-cover group-hover:scale-110 transition duration-500 cursor-pointer" onclick="window.open(this.src)">
-                        </div>
-                        <?php endforeach; ?>
-                    </div>
-                </section>
-            </div>
-        </div>
+    document.getElementById('visorImagen').addEventListener('click', function() {
+        this.classList.add('hidden');
+    });
+</script>
+
+
+<!-- VISOR DE IMAGEN -->
+<div id="imageModal" class="fixed inset-0 bg-black/70 hidden items-center justify-center z-50">
+    <div class="bg-white p-2 rounded-lg max-w-3xl w-full relative">
+        <button onclick="closeImageModal()" class="absolute top-2 right-2 bg-red-500 text-white px-3 py-1 rounded">X</button>
+        <img id="modalImage" src="" class="w-full h-auto object-contain max-h-[80vh]">
     </div>
 </div>
 
-<style>
-@media print {
-    .no-print { display: none !important; }
-    body { background: white !important; }
-    .bg-white { border: none !important; shadow: none !important; }
-    .max-w-5xl { max-width: 100% !important; }
-}
-</style>
+<script>
+    function openImageModal(src) {
+        document.getElementById('modalImage').src = src;
+        document.getElementById('imageModal').classList.remove('hidden');
+        document.getElementById('imageModal').classList.add('flex');
+    }
+
+    function closeImageModal() {
+        document.getElementById('imageModal').classList.add('hidden');
+    }
+</script>

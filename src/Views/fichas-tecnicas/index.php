@@ -10,15 +10,12 @@ $fichas = $fichas ?? [];
     </div>
     
     <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-
-
-        <a href="/../dashboard_home" class="text-gray-500 hover:text-gray-700 flex items-center text-sm font-medium transition" title="Volver al Listado">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        <a href="/../dashboard_home" class="flex items-center text-sm font-semibold text-gray-600 hover:text-blue-600 transition-colors">
+            <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
             </svg>
-            <span class="hidden sm:inline">Volver</span>
+            Volver
         </a>
-
 
         <div class="relative">
             <input type="text" id="searchInput" placeholder="Buscar ficha o cliente..." 

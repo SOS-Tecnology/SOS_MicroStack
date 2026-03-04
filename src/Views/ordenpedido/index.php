@@ -49,7 +49,7 @@
                         <div class="text-sm font-bold text-gray-800"><?= htmlspecialchars($p['cliente']) ?></div>
                         <div class="text-[10px] text-gray-400 uppercase italic">F. Entrega: <?= $p['fechent'] ?></div>
                     </td>
-                    <td class="p-4 text-sm font-bold text-right text-gray-700">$ <?= number_format($p['valortotal'], 2) ?></td>
+                    <td class="p-4 text-sm font-bold text-right text-gray-700">$ <?= number_format($p['valortotal'] ?? 0, 2) ?></td>
                     <td class="p-4 text-center">
                         <?php
                         if ($p['estado'] == 'C') {

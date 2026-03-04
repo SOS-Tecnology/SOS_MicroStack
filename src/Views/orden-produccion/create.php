@@ -48,28 +48,15 @@
                 </div>
             </div>
 
-            <div>
-                <div class="text-gray-500">Total Ítems</div>
-                <div class="font-medium">
-                    <?= $totalItems ?>
-                </div>
-            </div>
-
-            <div>
-                <div class="text-gray-500">Cantidad Total</div>
-                <div class="font-medium">
-                    <?= number_format($cantidadTotal, 2) ?>
-                </div>
-            </div>
 
         </div>
 
         <!-- Observaciones generales -->
-        <?php if (!empty($op['comentario'])): ?>
+        <?php if (!empty($op['comen'])): ?>
             <div class="mb-6 text-sm">
                 <div class="text-gray-500 mb-1">Observaciones OP</div>
                 <div class="p-3 bg-gray-50 rounded border text-gray-700">
-                    <?= nl2br(htmlspecialchars($op['comentario'])) ?>
+                    <?= nl2br(htmlspecialchars($op['comen'])) ?>
                 </div>
             </div>
         <?php endif; ?>
@@ -97,7 +84,21 @@
                 </tbody>
             </table>
         </div>
+         <div class="mb-6 flex justify-end gap-12 text-sm border-t ">
+             <div >
+                <div class="text-gray-500">Total Ítems</div>
+                <div class="font-medium">
+                    <?= $totalItems ?>
+                </div>
+            </div>
 
+            <div>
+                <div class="text-gray-500">Cantidad Total</div>
+                <div class="font-medium">
+                    <?= number_format($cantidadTotal, 2) ?>
+                </div>
+            </div>
+        </div>
         <!-- Formulario -->
         <form method="POST" action="/orden-produccion/store/<?= $op['documento'] ?>">
 

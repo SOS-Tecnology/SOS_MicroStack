@@ -8,10 +8,12 @@ session_set_cookie_params([
 ]);
 
 session_start();
-
+// var_dump(class_exists(\App\Controllers\OrdenProdController::class));
+// exit;
 
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../src/dependencies.php';
+require_once __DIR__ . '/../src/config.php';
 
 use Slim\Factory\AppFactory;
 use Medoo\Medoo;
@@ -22,6 +24,7 @@ use App\Controllers\FichaTecnicaController;
 use App\Controllers\SateliteController;
 use App\Controllers\OrdenPedidoController;
 use App\Controllers\OrdenProdController;
+use App\Controllers\ProcesosFTController;
 use App\Models\OprModel;
 
 
@@ -356,8 +359,7 @@ $app->group('', function ($app) {
 
     // ORDENES DE PRODUCCION
     // Rutas Orden de Producción (OPR)
-    // var_dump(class_exists(\App\Controllers\OrdenProdController::class));
-    // exit;
+
     $app->get('/orden-produccion', function ($request, $response) {
         // Aquí es donde inyectamos el $GLOBALS['db'] al controlador
         $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
@@ -379,11 +381,46 @@ $app->group('', function ($app) {
         return $controller->seguimiento($request, $response, $args);
     });
 
-
-
     $app->get('/orden-produccion/ver/{documento}', function ($request, $response, $args) {
         $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
         return $controller->ver($request, $response, $args);
+    });
+// PROCESOS FT se definirá en un grupo para mantener la organización
+    $app->group('/procesos-ft', function ($group) {
+
+        $group->get('', function ($request, $response) {
+            $controller = new App\Controllers\ProcesosFTController($GLOBALS['db']);
+            return $controller->index($request, $response);
+        });
+
+        $group->get('/create', function ($request, $response) {
+            $controller = new App\Controllers\ProcesosFTController($GLOBALS['db']);
+            return $controller->create($request, $response);
+        });
+
+        $group->post('/store', function ($request, $response) {
+            $controller = new App\Controllers\ProcesosFTController($GLOBALS['db']);
+            return $controller->store($request, $response);
+        });
+
+        $group->get('/edit/{id}', function ($request, $response, $args) {
+            $controller = new App\Controllers\ProcesosFTController($GLOBALS['db']);
+            return $controller->edit($request, $response, $args);
+        });
+
+         $group->get('/show/{id}', function ($request, $response, $args) {
+            $controller = new App\Controllers\ProcesosFTController($GLOBALS['db']);
+            return $controller->show($request, $response, $args);
+        });
+        $group->post('/update/{id}', function ($request, $response, $args) {
+            $controller = new App\Controllers\ProcesosFTController($GLOBALS['db']);
+            return $controller->update($request, $response, $args);
+        });
+
+        $group->get('/delete/{id}', function ($request, $response, $args) {
+            $controller = new App\Controllers\ProcesosFTController($GLOBALS['db']);
+            return $controller->delete($request, $response, $args);
+        });
     });
 })->add($authMiddleware);
 

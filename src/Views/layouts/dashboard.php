@@ -36,94 +36,99 @@
 
     <header class="bg-gray-600 border-b border-gray-200 shadow-sm text-white">
 
-    <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-        <!-- IZQUIERDA: Empresa -->
-        <div class="flex items-center space-x-3">
-            <!-- Logo -->
-            <div class="w-10 h-10 bg-blue-600 text-white rounded flex items-center justify-center font-bold">
-                D&D
-            </div>
-
-            <!-- Nombre empresa -->
-            <div class="leading-tight">
-                <div class="font-semibold text-white text-lg">
-                    DyD Dotaciones y Deportes SAS.
-                </div>
-                <div class="text-xs text-gray-300">
-                    SOS-MicroStack
-                </div>
-            </div>
-        </div>
-
-        <!-- DERECHA: Inicio + Usuario -->
-        <?php if (isset($_SESSION['user'])): ?>
-            <div class="flex items-center space-x-4 relative">
-
-                <!-- Inicio -->
-                <a href="/dashboard_home"
-                    class="text-gray-600 hover:text-blue-600 transition"
-                    title="Inicio">
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                        class="w-5 h-5"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                        stroke-width="1.5">
-                        <path d="M3 9.75L12 4l9 5.75V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1V9.75z" />
-                    </svg>
+        <div class="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <!-- IZQUIERDA: Empresa -->
+            <div class="flex items-center space-x-3">
+                <!-- Logo -->
+                <a href="<?= BASE_URL ?>/dashboard_home"
+                    class="w-10 h-10 bg-blue-600 text-white rounded flex items-center justify-center font-bold hover:bg-blue-700 transition">
+                    D&D
                 </a>
 
-                <!-- Usuario -->
-                <button onclick="toggleUserMenu()"
-                    class="flex items-center space-x-2 text-sm text-white-700
+                <!-- Nombre empresa -->
+                <div class="leading-tight">
+                    <div class="font-semibold text-white text-lg">
+                        DyD Dotaciones y Deportes SAS.
+                    </div>
+                    <div class="text-xs text-gray-300">
+                        SOS-MicroStack
+                    </div>
+                </div>
+            </div>
+
+            <!-- DERECHA: Inicio + Usuario -->
+            <?php if (isset($_SESSION['user'])): ?>
+                <div class="flex items-center space-x-4 relative">
+
+                    <!-- Inicio -->
+                    <a href="/dashboard_home"
+                        class="text-gray-600 hover:text-blue-600 transition"
+                        title="Inicio">
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="w-5 h-5"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
+                            stroke-width="1.5">
+                            <path d="M3 9.75L12 4l9 5.75V20a1 1 0 01-1 1h-5v-6H9v6H4a1 1 0 01-1-1V9.75z" />
+                        </svg>
+                    </a>
+
+                    <!-- Usuario -->
+                    <button onclick="toggleUserMenu()"
+                        class="flex items-center space-x-2 text-sm text-white-700
                            hover:text-gray-700 focus:outline-none">
-                    <span class="font-medium">
-                        <?= htmlspecialchars($_SESSION['user']['name'] ?? 'Usuario') ?>
-                    </span>
+                        <span class="font-medium">
+                            <?= htmlspecialchars($_SESSION['user']['name'] ?? 'Usuario') ?>
+                        </span>
 
-                    <svg xmlns="http://www.w3.org/2000/svg"
-                        class="w-4 h-4"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor">
-                        <path d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="w-4 h-4"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor">
+                            <path d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
 
-                <!-- Dropdown usuario -->
-                <div id="userMenu"
-                    class="hidden absolute right-0 top-10 w-48 bg-white
+                    <!-- Dropdown usuario -->
+                    <div id="userMenu"
+                        class="hidden absolute right-0 top-10 w-48 bg-white
                         border rounded-lg shadow-lg z-50 overflow-hidden">
 
-                    <a href="/perfil"
-                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                        Cambiar información
-                    </a>
+                        <a href="/perfil"
+                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            Cambiar información
+                        </a>
 
-                    <a href="/usuarios/create"
-                        class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
-                        Crear usuario
-                    </a>
+                        <a href="/usuarios/create"
+                            class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                            Crear usuario
+                        </a>
 
-                    <div class="border-t"></div>
+                        <div class="border-t"></div>
 
-                    <a href="/logout"
-                        class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
-                        Cerrar sesión
-                    </a>
+                        <a href="/logout"
+                            class="block px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                            Cerrar sesión
+                        </a>
+                    </div>
+
                 </div>
-
-            </div>
-        <?php endif; ?>
-    </div>
+            <?php endif; ?>
+        </div>
     </header>
 
-    <main class="flex-1 p-6">
+    <!-- <main class="flex-1 p-6">
         <div class="container mx-auto">
+            // < ?=  $content ?>
+        </div>
+    </main> -->
+    <main class="flex-1">
+        <div class="max-w-7xl mx-auto px-6 mt-6">
             <?= $content ?>
         </div>
     </main>
-
     <footer class="bg-white border-t text-center p-4 text-sm text-gray-500">
         &copy; <?= date('Y'); ?> SOS Technology | Sistema de Gestión
     </footer>

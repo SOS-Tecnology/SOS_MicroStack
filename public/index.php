@@ -26,7 +26,7 @@ use App\Controllers\OrdenPedidoController;
 use App\Controllers\OrdenProdController;
 use App\Controllers\ProcesosFTController;
 use App\Models\OprModel;
-
+use App\Controllers\EppController;
 
 $authMiddleware = new AuthMiddleware();
 
@@ -385,7 +385,7 @@ $app->group('', function ($app) {
         $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
         return $controller->ver($request, $response, $args);
     });
-// PROCESOS FT se definirá en un grupo para mantener la organización
+    // PROCESOS FT se definirá en un grupo para mantener la organización
     $app->group('/procesos-ft', function ($group) {
 
         $group->get('', function ($request, $response) {
@@ -408,7 +408,7 @@ $app->group('', function ($app) {
             return $controller->edit($request, $response, $args);
         });
 
-         $group->get('/show/{id}', function ($request, $response, $args) {
+        $group->get('/show/{id}', function ($request, $response, $args) {
             $controller = new App\Controllers\ProcesosFTController($GLOBALS['db']);
             return $controller->show($request, $response, $args);
         });
@@ -422,6 +422,52 @@ $app->group('', function ($app) {
             return $controller->delete($request, $response, $args);
         });
     });
+
+    // ==========================
+    // EPP - ENVÍO A PROCESO
+    // ==========================
+
+    // Listado
+    $app->get('/epp', function ($request, $response) {
+
+        $controller = new \App\Controllers\EppController($GLOBALS['db']);
+        return $controller->index($request, $response);
+    });
+
+    // Formulario crear
+    $app->get('/epp/create', function ($request, $response) {
+
+        $controller = new \App\Controllers\EppController($GLOBALS['db']);
+        return $controller->create($request, $response);
+    });
+
+    // Guardar
+    $app->post('/epp/store', function ($request, $response) {
+
+        $controller = new \App\Controllers\EppController($GLOBALS['db']);
+        return $controller->store($request, $response);
+    });
+
+    // Ver
+    $app->get('/epp/show/{id}', function ($request, $response, $args) {
+
+        $controller = new \App\Controllers\EppController($GLOBALS['db']);
+        return $controller->show($request, $response, $args);
+    });
+
+    // Imprimir
+    $app->get('/epp/print/{id}', function ($request, $response, $args) {
+
+        $controller = new \App\Controllers\EppController($GLOBALS['db']);
+        return $controller->print($request, $response, $args);
+    });
+    // Obtener datos de OPR (MP y META)
+$app->get('/epp/opr/{documento}', function ($request, $response, $args) {
+
+    $controller = new \App\Controllers\EppController($GLOBALS['db']);
+    return $controller->getOprData($request, $response, $args);
+
+});
 })->add($authMiddleware);
 
 $app->run();

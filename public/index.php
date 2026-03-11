@@ -462,12 +462,11 @@ $app->group('', function ($app) {
         return $controller->print($request, $response, $args);
     });
     // Obtener datos de OPR (MP y META)
-$app->get('/epp/opr/{documento}', function ($request, $response, $args) {
+    $app->get('/epp/opr/{documento}', function ($request, $response, $args) {
 
-    $controller = new \App\Controllers\EppController($GLOBALS['db']);
-    return $controller->getOprData($request, $response, $args);
-
-});
+        $controller = new \App\Controllers\EppController($GLOBALS['db']);
+        return $controller->getOprData($request, $response, $args);
+    });
 })->add($authMiddleware);
 
 $app->run();

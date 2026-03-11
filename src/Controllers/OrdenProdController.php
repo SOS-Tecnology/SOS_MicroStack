@@ -451,125 +451,121 @@ class OrdenProdController
             ]
         );
     }
-public function crearEPP($request,$response,$args)
-{
-    $documento = $args['documento'];
-    $prefijo   = "OP";
-
-    // OPR
-    $opr = $this->db->get("cabezamov","*",[
-        "tm"=>"OPR",
-        "prefijo"=>$prefijo,
-        "documento"=>$documento
-    ]);
-
-    // PROCESOS DISPONIBLES
-    $procesos = $this->db->select("procesos_ft","*",[
-        "activo"=>1,
-        "ORDER"=>"nombre"
-    ]);
-
-    // RESPONSABLES
-    $personal = $this->db->select("personal",[
-        "id",
-        "nombre"
-    ]);
-
-    // SATELITES
-    $satelites = $this->db->select("satelites",[
-        "id",
-        "nombre"
-    ]);
-
-    // MATERIALES DESDE OPR
-    $materiales = $this->db->select("cuerpomov",[
-        "[>]inrefinv"=>["codr"=>"codr"]
-    ],[
-        "cuerpomov.codr",
-        "inrefinv.descr",
-        "cuerpomov.cantidad"
-    ],[
-        "tm"=>"OPR",
-        "prefijo"=>$prefijo,
-        "documento"=>$documento
-    ]);
-
-    return renderView(
-        $response,
-        __DIR__.'/../Views/epp/create.php',
-        "Crear EPP",
-        [
-            "opr"=>$opr,
-            "procesos"=>$procesos,
-            "personal"=>$personal,
-            "satelites"=>$satelites,
-            "materiales"=>$materiales
-        ]
-    );
-}
-
-public function guardarEPP($request,$response)
-{
-    $data = $request->getParsedBody();
-
-    $prefijo = "EP";
-    $tm      = "EPP";
-
-    $numero = $this->db->max("cabezamov","documento",[
-        "tm"=>$tm
-    ]) + 1;
-
-    // CABECERA
-    $this->db->insert("cabezamov",[
-        "tm"=>$tm,
-        "prefijo"=>$prefijo,
-        "documento"=>$numero,
-        "fecha"=>$data['fecha'],
-        "fechent"=>$data['fechent'],
-        "codresp"=>$data['responsable'],
-        "codsat"=>$data['satelite'],
-        "proceso"=>$data['proceso'],
-        "comen"=>$data['observaciones'],
-
-        "tmaux"=>"OPR",
-        "prefaux"=>"OP",
-        "docaux"=>$data['opr']
-    ]);
-
-    // ENTREGA
-    if(!empty($data['entrega_codr']))
+    public function crearEPP($request, $response, $args)
     {
-        foreach($data['entrega_codr'] as $i=>$codr)
-        {
-            $this->db->insert("cuerpomov",[
-                "tm"=>$tm,
-                "prefijo"=>$prefijo,
-                "documento"=>$numero,
-                "tipo"=>"ENTREGA",
-                "codr"=>$codr,
-                "cantidad"=>$data['entrega_cant'][$i]
-            ]);
-        }
+        $documento = $args['documento'];
+        $prefijo   = "OP";
+
+        // OPR
+        $opr = $this->db->get("cabezamov", "*", [
+            "tm" => "OPR",
+            "prefijo" => $prefijo,
+            "documento" => $documento
+        ]);
+
+        // PROCESOS DISPONIBLES
+        $procesos = $this->db->select("procesos_ft", "*", [
+            "activo" => 1,
+            "ORDER" => "nombre"
+        ]);
+
+        // RESPONSABLES
+        $personal = $this->db->select("personal", [
+            "id",
+            "nombre"
+        ]);
+
+        // SATELITES
+        $satelites = $this->db->select("satelites", [
+            "id",
+            "nombre"
+        ]);
+
+        // MATERIALES DESDE OPR
+        $materiales = $this->db->select("cuerpomov", [
+            "[>]inrefinv" => ["codr" => "codr"]
+        ], [
+            "cuerpomov.codr",
+            "inrefinv.descr",
+            "cuerpomov.cantidad"
+        ], [
+            "tm" => "OPR",
+            "prefijo" => $prefijo,
+            "documento" => $documento
+        ]);
+
+        return renderView(
+            $response,
+            __DIR__ . '/../Views/epp/create.php',
+            "Crear EPP",
+            [
+                "opr" => $opr,
+                "procesos" => $procesos,
+                "personal" => $personal,
+                "satelites" => $satelites,
+                "materiales" => $materiales
+            ]
+        );
     }
 
-    // META
-    if(!empty($data['meta_codr']))
+    public function guardarEPP($request, $response)
     {
-        foreach($data['meta_codr'] as $i=>$codr)
-        {
-            $this->db->insert("cuerpomov",[
-                "tm"=>$tm,
-                "prefijo"=>$prefijo,
-                "documento"=>$numero,
-                "tipo"=>"META",
-                "codr"=>$codr,
-                "cantidad"=>$data['meta_cant'][$i]
-            ]);
-        }
-    }
+        $data = $request->getParsedBody();
 
-    return $response
-        ->withHeader("Location","/epp/ver/".$numero)
-        ->withStatus(302);
+        $prefijo = "EP";
+        $tm      = "EPP";
+
+        $numero = $this->db->max("cabezamov", "documento", [
+            "tm" => $tm
+        ]) + 1;
+
+        // CABECERA
+        $this->db->insert("cabezamov", [
+            "tm" => $tm,
+            "prefijo" => $prefijo,
+            "documento" => $numero,
+            "fecha" => $data['fecha'],
+            "fechent" => $data['fechent'],
+            "codresp" => $data['responsable'],
+            "codsat" => $data['satelite'],
+            "proceso" => $data['proceso'],
+            "comen" => $data['observaciones'],
+
+            "tmaux" => "OPR",
+            "prefaux" => "OP",
+            "docaux" => $data['opr']
+        ]);
+
+        // ENTREGA
+        if (!empty($data['entrega_codr'])) {
+            foreach ($data['entrega_codr'] as $i => $codr) {
+                $this->db->insert("cuerpomov", [
+                    "tm" => $tm,
+                    "prefijo" => $prefijo,
+                    "documento" => $numero,
+                    "tipo" => "ENTREGA",
+                    "codr" => $codr,
+                    "cantidad" => $data['entrega_cant'][$i]
+                ]);
+            }
+        }
+
+        // META
+        if (!empty($data['meta_codr'])) {
+            foreach ($data['meta_codr'] as $i => $codr) {
+                $this->db->insert("cuerpomov", [
+                    "tm" => $tm,
+                    "prefijo" => $prefijo,
+                    "documento" => $numero,
+                    "tipo" => "META",
+                    "codr" => $codr,
+                    "cantidad" => $data['meta_cant'][$i]
+                ]);
+            }
+        }
+
+        return $response
+            ->withHeader("Location", "/epp/ver/" . $numero)
+            ->withStatus(302);
+    }
 }
- }

@@ -13,8 +13,7 @@
             </h1>
 
             <a href="/epp"
-                class="bg-gray-600 px-4 py-2 rounded hover:bg-gray-700">
-
+                class="bg-gray-600 px-4 py-2 rounded hover:bg-gray-400">
                 ← Volver
 
             </a>
@@ -127,7 +126,7 @@
 
                 <label class="block text-sm">Responsable</label>
 
-                <select name="responsable"
+                <select name="personal"
                     class="w-full text-black select2">
 
                     <option value="">Seleccione</option>
@@ -135,7 +134,7 @@
                     <?php foreach ($personal as $p): ?>
 
                         <option value="<?= $p['id'] ?>">
-                            <?= $p['nombre'] ?>
+                            <?= $p['nombres'] ?>
                         </option>
 
                     <?php endforeach; ?>
@@ -153,7 +152,7 @@
 <!-- MATERIA PRIMA -->
 <!-- ============================= -->
 
-<div class="bg-gray-700 p-4 rounded-lg mb-6">
+<div class="bg-gray-400 p-4 rounded-lg mb-6">
 
     <div class="flex justify-between mb-3">
 
@@ -198,7 +197,7 @@
 <!-- METAS -->
 <!-- ============================= -->
 
-<div class="bg-gray-700 p-4 rounded-lg mb-6">
+<div class="bg-gray-400 p-4 rounded-lg mb-6">
 
     <div class="flex justify-between mb-3">
 
@@ -253,7 +252,7 @@
 <!-- OBSERVACIONES -->
 <!-- ============================= -->
 
-<div class="bg-gray-700 p-4 rounded-lg mb-6">
+<div class="bg-gray-400 p-4 rounded-lg mb-6">
 
     <label class="block mb-2 font-semibold">
         Observaciones
@@ -272,13 +271,13 @@
 <div class="flex justify-end gap-3">
 
     <a href="/epp"
-        class="bg-gray-600 px-5 py-2 rounded hover:bg-gray-700">
+        class="bg-gray-600 px-5 py-2 rounded hover:bg-gray-400">
 
         Volver
 
     </a>
 
-    <button class="bg-blue-600 px-6 py-2 rounded hover:bg-blue-700">
+    <button class="bg-blue-600 px-6 py-2 rounded hover:bg-blue-400">
 
         Guardar EPP
 

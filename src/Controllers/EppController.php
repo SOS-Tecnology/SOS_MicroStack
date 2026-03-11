@@ -20,16 +20,15 @@ class EppController
         $movimientos = $this->db->select("cabezamov", [
             "[>]provee" => ["codcp" => "codp"]
         ], [
-            "cabezamov.id",
             "cabezamov.documento",
             "cabezamov.fecha",
             "cabezamov.fechent",
             "cabezamov.estado",
-            "cabezamov.codp",
+            "cabezamov.codcp",
             "provee.nombre(proveedor)"
         ], [
             "cabezamov.tm" => "EPP",
-            "ORDER" => ["cabezamov.id" => "DESC"]
+            "ORDER" => ["cabezamov.documento" => "DESC"]
         ]);
 
         return renderView($response, __DIR__ . '/../Views/Epp/index.php', "Envíos a Proceso (EPP)", [
@@ -51,10 +50,10 @@ class EppController
 
         $nuevoConsecutivo = $ultimo ? $ultimo + 1 : 1;
         $nextEpp = $this->db->query("
-            SELECT IFNULL(MAX(documento)+1,1) AS num
-            FROM cabezamov
-            WHERE tm='EPP'
-            ")->fetch()['num'];
+        SELECT IFNULL(MAX(documento)+1,1) AS num
+        FROM cabezamov
+        WHERE tm='EPP'
+        ")->fetch()['num'];
         $nextEpp = ($max ?? 0) + 1;
 
         $oprs = $this->db->select("cabezamov", [
@@ -88,10 +87,12 @@ class EppController
 
         $procesos = $this->db->select("procesos_ft", [
             "id",
-            "nombre"
+            "nombre",
+            "tipo",
+            "modo_tiempo"
         ]);
 
-        $responsables = $this->db->select("personal", [
+        $personal = $this->db->select("personal", [
             "id",
             "nombres",
             "apellidos",
@@ -102,7 +103,7 @@ class EppController
             'consecutivo' => $nuevoConsecutivo,
             'satelites'   => $satelites,
             'procesos'    => $procesos,
-            'responsables' => $responsables,
+            'personal' => $personal,
             'oprs'        => $oprs,
             'nextEpp'     => $nextEpp
         ]);
@@ -332,38 +333,112 @@ class EppController
 
         return $response->withHeader('Content-Type', 'application/json');
     }
+
     public function getOprData($request, $response, $args)
     {
 
         $documento = $args['documento'];
+        $prefijo   = "OP";
 
-        // META
-        $meta = $this->db->select("cuerpomov", [
-            "codr",
-            "codtalla",
-            "cantidad"
+        // ======================
+        // CLIENTE
+        // ======================
+
+        $cliente = $this->db->get("cabezamov", [
+            "[>]geclientes" => ["codcp" => "codcli"]
         ], [
-            "prefijo" => "OP",
-            "documento" => $documento,
-            "tm" => "OPR",
-            "tipo_registro" => "META"
+            "geclientes.nombrecli"
+        ], [
+            "cabezamov.tm"        => "OPR",
+            "cabezamov.documento" => $documento,
+            "cabezamov.prefijo"   => $prefijo
         ]);
 
-        // MP
-        $mp = $this->db->select("cuerpomov", [
-            "codr",
-            "unidad",
-            "cantidad"
+        // ======================
+        // ITEMS META (PRODUCTOS)
+        // ======================
+
+        $items = $this->db->select("cuerpomov", [
+            "[>]inrefinv" => ["codr" => "codr"]
         ], [
-            "prefijo" => "OP",
-            "documento" => $documento,
-            "tm" => "OPR",
-            "tipo_registro" => "MP"
+            "cuerpomov.codr",
+            "inrefinv.descr(producto)",
+            "inrefinv.ref_fabrica(id_producto_base)",
+            "cuerpomov.codtalla",
+            "cuerpomov.cantidad"
+        ], [
+            "cuerpomov.documento" => $documento,
+            "cuerpomov.prefijo"   => $prefijo,
+            "cuerpomov.tm"        => "OPR"
         ]);
+
+        $meta = [];
+        $materiales = [];
+
+        foreach ($items as $it) {
+
+            // ======================
+            // META
+            // ======================
+
+            $meta[] = [
+                "codr" => $it['codr'],
+                "descr" => $it['producto'],
+                "codtalla" => $it['codtalla'],
+                "cantidad" => $it['cantidad']
+            ];
+
+            // ======================
+            // BUSCAR FICHA TECNICA
+            // ======================
+
+            $ft_id = $this->db->get("fichas_tecnicas", "id", [
+                "id_producto_base" => $it['id_producto_base']
+            ]);
+
+            if (!$ft_id) continue;
+
+            // ======================
+            // MATERIALES FT
+            // ======================
+
+            $detalles_ft = $this->db->select("ficha_tecnica_detalles", "*", [
+                "id_ficha_tecnica" => $ft_id
+            ]);
+
+            foreach ($detalles_ft as $det) {
+
+                $codr = $det['codr'];
+
+                if (!isset($materiales[$codr])) {
+
+                    $prod = $this->db->get("inrefinv", [
+                        "descr",
+                        "unid"
+                    ], [
+                        "codr" => $codr
+                    ]);
+
+                    $materiales[$codr] = [
+                        "codr" => $codr,
+                        "descr" => $prod['descr'] ?? '',
+                        "unidad" => $prod['unid'] ?? '',
+                        "cantidad" => 0
+                    ];
+                }
+
+                // cantidad FT * cantidad OPR
+                $materiales[$codr]['cantidad'] +=
+                    $det['cantidad'] * $it['cantidad'];
+            }
+        }
 
         $response->getBody()->write(json_encode([
-            "meta" => $meta,
-            "mp"   => $mp
+
+            "cliente"    => $cliente['nombrecli'] ?? '',
+            "meta"       => $meta,
+            "materiales" => array_values($materiales)
+
         ]));
 
         return $response->withHeader('Content-Type', 'application/json');

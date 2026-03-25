@@ -385,6 +385,21 @@ $app->group('', function ($app) {
         $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
         return $controller->ver($request, $response, $args);
     });
+    $app->get('/orden-produccion/avance', function ($request, $response, $args) {
+        $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
+        return $controller->avance($request, $response, $args);
+    });
+    $app->get('/orden-produccion/avance/ver/{documento}', function ($request, $response, $args) {
+        $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
+        return $controller->verAvance($request, $response, $args);
+    });
+    // ===============================
+    // GESTIÓN PROCESOS OPR (EPP / RPP)
+    // ===============================
+    $app->get('/orden-produccion/procesos/{documento}/{proceso}', function ($request, $response, $args) {
+        $controller = new \App\Controllers\OrdenProdController($GLOBALS['db']);
+        return $controller->procesos($request, $response, $args);
+    });
     // PROCESOS FT se definirá en un grupo para mantener la organización
     $app->group('/procesos-ft', function ($group) {
 
@@ -435,12 +450,17 @@ $app->group('', function ($app) {
     });
 
     // Formulario crear
-    $app->get('/epp/create', function ($request, $response) {
+    // $app->get('/epp/create/{documento}/{ft_id}/{proceso}', function ($request, $response, $args) {
+
+    //     $controller = new \App\Controllers\EppController($GLOBALS['db']);
+    //     return $controller->create($request, $response, $args);
+    // });
+    // Formulario crear
+    $app->get('/epp/create/{documento}/{proceso}', function ($request, $response, $args) {
 
         $controller = new \App\Controllers\EppController($GLOBALS['db']);
-        return $controller->create($request, $response);
+        return $controller->create($request, $response, $args);
     });
-
     // Guardar
     $app->post('/epp/store', function ($request, $response) {
 
@@ -449,15 +469,13 @@ $app->group('', function ($app) {
     });
 
     // Ver
-    $app->get('/epp/show/{id}', function ($request, $response, $args) {
-
+    $app->get('/epp/show/{documento}', function ($request, $response, $args) {
         $controller = new \App\Controllers\EppController($GLOBALS['db']);
         return $controller->show($request, $response, $args);
     });
 
     // Imprimir
-    $app->get('/epp/print/{id}', function ($request, $response, $args) {
-
+    $app->get('/epp/print/{documento}', function ($request, $response, $args) {
         $controller = new \App\Controllers\EppController($GLOBALS['db']);
         return $controller->print($request, $response, $args);
     });
@@ -466,6 +484,16 @@ $app->group('', function ($app) {
 
         $controller = new \App\Controllers\EppController($GLOBALS['db']);
         return $controller->getOprData($request, $response, $args);
+    });
+
+    $app->get('/rpp/create/{epp}', function ($request, $response, $args) {
+        $controller = new \App\Controllers\RppController($GLOBALS['db']);
+        return $controller->create($request, $response, $args);
+    });
+
+    $app->post('/rpp/store', function ($request, $response) {
+        $controller = new \App\Controllers\RppController($GLOBALS['db']);
+        return $controller->store($request, $response);
     });
 })->add($authMiddleware);
 

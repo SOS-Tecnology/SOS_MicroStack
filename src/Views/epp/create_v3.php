@@ -1,30 +1,30 @@
-<?php if (!empty($_SESSION['error'])): ?>
-    <div class="bg-red-500 text-white p-3 rounded mb-4">
-        <?= $_SESSION['error'];
-        unset($_SESSION['error']); ?>
-    </div>
-<?php endif; ?>
-
 <div class="max-w-7xl mx-auto bg-gray-500 text-white rounded-xl p-6">
-
+    
     <!-- ============================= -->
     <!-- CABECERA DOCUMENTO -->
     <!-- ============================= -->
 
     <div class="flex justify-between items-center mb-6">
 
-        <a href="/orden-produccion/avance"
-            class="bg-gray-600 px-4 py-2 rounded hover:bg-gray-400">
-            ← Volver
-        </a>
-        <h2 class="text-2xl font-semibold text-gray-700">
-            Envío a Proceso (EPP) #<?= $nextEpp ?>
-        </h2>
+        <div class="flex justify-between items-center mb-6">
+
+            <h1 class="text-xl font-bold">
+                Envío a Proceso (EPP) #<?= $nextEpp ?>
+            </h1>
+
+            <a href="/orden-produccion/avance"
+                class="bg-gray-600 px-4 py-2 rounded hover:bg-gray-400">
+                ← Volver
+
+            </a>
+
+        </div>
 
     </div>
 
 
     <form method="POST" action="/epp/store">
+
 
         <!-- ============================= -->
         <!-- BLOQUE DOCUMENTO -->
@@ -32,7 +32,6 @@
 
         <input type="hidden" name="documento" value="<?= $nextEpp ?>">
         <input type="hidden" name="detalle_json" id="detalle_json">
-        <input type="hidden" name="codcp" value="">
         <!-- ============================= -->
         <!-- ENCABEZADO -->
         <!-- ============================= -->
@@ -41,29 +40,21 @@
 
             <div>
                 <label class="block mb-1">OPR</label>
+
                 <select id="opr_select" name="opr"
-                    class="w-full text-black select2"
-                    <?= isset($opr_param) ? 'disabled' : '' ?> required>
+                    class="w-full text-black select2" required>
 
                     <option value="">Seleccione OPR</option>
 
                     <?php foreach ($oprs as $o): ?>
 
-                        <option value="<?= $o['documento'] ?>"
-                            <?= (isset($opr_param) && $opr_param == $o['documento']) ? 'selected' : '' ?>>
-
+                        <option value="<?= $o['documento'] ?>">
                             OPR <?= $o['documento'] ?>
-
                         </option>
 
                     <?php endforeach; ?>
 
                 </select>
-                <?php if (isset($opr_param)): ?>
-
-                    <input type="hidden" name="opr" value="<?= $opr_param ?>">
-
-                <?php endif; ?>
             </div>
 
 
@@ -93,31 +84,21 @@
             <div>
                 <label>Proceso</label>
                 <select name="proceso"
-                    class="w-full text-black select2"
-                    <?= isset($proceso_param) ? 'disabled' : '' ?> required>
+                    class="w-full text-black select2" required>
 
                     <option value="">Seleccione</option>
 
                     <?php foreach ($procesos as $p): ?>
 
                         <option value="<?= $p['id'] ?>"
-                            data-entrada="<?= $p['entrada_tipo'] ?>"
-                            <?= (isset($proceso_param) && strtoupper($proceso_param) == strtoupper($p['nombre'])) ? 'selected' : '' ?>>
+                            data-entrada="<?= $p['entrada_tipo'] ?>">
 
                             <?= $p['nombre'] ?>
 
                         </option>
 
                     <?php endforeach; ?>
-                    <?php if (isset($proceso_param)): ?>
 
-                        <?php foreach ($procesos as $p): ?>
-                            <?php if (strtoupper($proceso_param) == strtoupper($p['nombre'])): ?>
-                                <input type="hidden" name="proceso" value="<?= $p['id'] ?>">
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-
-                    <?php endif; ?>
                 </select>
 
             </div>
@@ -296,7 +277,7 @@
 
 <div class="flex justify-end gap-3">
 
-    <a href="/orden-produccion/avance"
+    <a href="/epp"
         class="bg-gray-600 px-5 py-2 rounded hover:bg-gray-400">
 
         Volver
@@ -335,7 +316,6 @@
             }
 
         });
-        $('select[name="proceso"]').trigger('change');
 
         $('.select2').select2({
             width: '100%'
@@ -362,67 +342,67 @@
                     data.materiales.forEach(function(m) {
 
                         entrega += `
-                            <tr>
+<tr>
 
-                            <td>
+<td>
 
-                            <input type="hidden"
-                            name="entrega_codr[]"
-                            value="${m.codr}">
+<input type="hidden"
+name="entrega_codr[]"
+value="${m.codr}">
 
-                            ${m.codr}
+${m.codr}
 
-                            </td>
+</td>
 
-                            <td>${m.descr}</td>
+<td>${m.descr}</td>
 
-                            <td>
-                            <input type="number"
-                            name="entrega_cant[]"
-                            value="${m.cantidad ?? 0}"
-                            class="border p-1 w-24">
-                            </td>
+<td>
+<input type="number"
+name="entrega_cant[]"
+value="${m.cantidad ?? 0}"
+class="border p-1 w-24">
+</td>
 
-                            <td>
-                            <button type="button"
-                            onclick="eliminarFila(this)"
-                            class="text-red-600">X</button>
-                            </td>
+<td>
+<button type="button"
+onclick="eliminarFila(this)"
+class="text-red-600">X</button>
+</td>
 
-                            </tr>`;
+</tr>`;
                     });
 
                 else {
 
                     entrega = `
-                        <tr>
+<tr>
 
-                        <td>
-                        <input type="text"
-                        name="entrega_codr[]"
-                        class="border p-1 w-full">
-                        </td>
+<td>
+<input type="text"
+name="entrega_codr[]"
+class="border p-1 w-full">
+</td>
 
-                        <td>
-                        <input type="text"
-                        name="entrega_desc[]"
-                        class="border p-1 w-full">
-                        </td>
+<td>
+<input type="text"
+name="entrega_desc[]"
+class="border p-1 w-full">
+</td>
 
-                        <td>
-                        <input type="number"
-                        name="entrega_cant[]"
-                        class="border p-1 w-24 text-center">
-                        </td>
+<td>
+<input type="number"
+name="entrega_cant[]"
+class="border p-1 w-24 text-center">
+</td>
 
-                        <td>
-                        <button type="button"
-                        onclick="eliminarFila(this)"
-                        class="text-red-600">X</button>
-                        </td>
+<td>
+<button type="button"
+onclick="eliminarFila(this)"
+class="text-red-600">X</button>
+</td>
 
-                        </tr>
-                        `;
+</tr>
+`;
 
                 }
 
@@ -431,43 +411,43 @@
                     data.meta.forEach(function(m) {
 
                         meta += `
-                            <tr>
+<tr>
 
-                            <td>
+<td>
+<input type="text"
+name="meta_codr[]"
+value="${m.codr}"
+class="border p-1 w-full">
+</td>
+
+<td>${m.descr}</td>
+                           <td>
                             <input type="text"
-                            name="meta_codr[]"
-                            value="${m.codr}"
-                            class="border p-1 w-full">
+                            name="meta_talla[]"
+                            value="${m.codtalla ?? ''}"
+                            class="border p-1 w-20 text-center">
                             </td>
-
-                            <td>${m.descr}</td>
-                                                    <td>
-                                                        <input type="text"
-                                                        name="meta_talla[]"
-                                                        value="${m.codtalla ?? ''}"
-                                                        class="border p-1 w-20 text-center">
-                                                        </td>
-                                                        <td>
-                            <input type="text"
-                            name="meta_color[]"
-                            value="${m.codcolor ?? ''}"
-                            class="border p-1 w-24">
-                            </td>
-
                             <td>
-                            <input type="number"
-                            name="meta_cant[]"
-                            value="${m.cantidad ?? 0}"
-                            class="border p-1 w-24 text-center">
-                            </td>
+<input type="text"
+name="meta_color[]"
+value="${m.codcolor ?? ''}"
+class="border p-1 w-24">
+</td>
 
-                            <td>
-                            <button type="button"
-                            onclick="eliminarFila(this)"
-                            class="text-red-600">X</button>
-                            </td>
+<td>
+<input type="number"
+name="meta_cant[]"
+value="${m.cantidad ?? 0}"
+class="border p-1 w-24 text-center">
+</td>
 
-                            </tr>`;
+<td>
+<button type="button"
+onclick="eliminarFila(this)"
+class="text-red-600">X</button>
+</td>
+
+</tr>`;
                     });
 
                 } else {
@@ -486,17 +466,7 @@
 
         });
 
-        // Si viene OPR desde Avance OPR, disparar carga automática
-        <?php if (isset($opr_param)): ?>
-
-            $('#opr_select').trigger('change');
-
-        <?php endif; ?>
     });
-
-
-
-
 
     function eliminarFila(btn) {
 
@@ -508,28 +478,28 @@
     function agregarEntrega() {
 
         let fila = `
-            <tr>
+<tr>
 
-            <td style="width:200px;">
-            <select name="entrega_codr[]" class="ref_select w-full"></select>
-            </td>
+<td style="width:200px;">
+<select name="entrega_codr[]" class="ref_select w-full"></select>
+</td>
 
-            <td class="descr"></td>
+<td class="descr"></td>
 
-            <td>
-            <input type="number"
-            name="entrega_cant[]"
-            value="0"
-            class="border p-1 w-24 text-center">
-            </td>
+<td>
+<input type="number"
+name="entrega_cant[]"
+value="0"
+class="border p-1 w-24 text-center">
+</td>
 
-            <td>
-            <button type="button"
-            onclick="eliminarFila(this)"
-            class="text-red-600">X</button>
-            </td>
+<td>
+<button type="button"
+onclick="eliminarFila(this)"
+class="text-red-600">X</button>
+</td>
 
-            </tr>`;
+</tr>`;
 
         $('#tabla_entrega tbody').append(fila);
 
@@ -561,64 +531,47 @@
 
         });
 
-        detalle.push({
-            codr: codr,
-            codtalla: talla,
-            codcolor: codcolor, // por ahora vacío si no lo tienes
-            cantidad: cantidad,
-            tipo_registro: 'META',
-            unidad: 'UND',
-            valor: 0
-        });
-
     }
 
     function agregarMeta() {
 
         let fila = `
-            <tr>
+<tr>
 
-            <td>
-            <input type="text"
-            name="meta_codr[]"
-            class="border p-1 w-full">
-            </td>
+<td>
+<input type="text"
+name="meta_codr[]"
+class="border p-1 w-full">
+</td>
 
-            <td>
-            <input type="text"
-            class="border p-1 w-full">
-            </td>
+<td>
+<input type="text"
+class="border p-1 w-full">
+</td>
 
-            <td>
-            <input type="text"
-            name="meta_talla[]"
-            class="border p-1 w-20 text-center">
-            </td>
+<td>
+<input type="text"
+name="meta_talla[]"
+class="border p-1 w-20 text-center">
+</td>
 
-            <td>
-            <input type="number"
-            name="meta_cant[]"
-            value="0"
-            class="border p-1 w-24 text-center">
-            </td>
+<td>
+<input type="number"
+name="meta_cant[]"
+value="0"
+class="border p-1 w-24 text-center">
+</td>
 
-            <td>
-            <button type="button"
-            onclick="eliminarFila(this)"
-            class="text-red-600">X</button>
-            </td>
+<td>
+<button type="button"
+onclick="eliminarFila(this)"
+class="text-red-600">X</button>
+</td>
 
-            </tr>`;
+</tr>`;
 
         $('#tabla_meta tbody').append(fila);
 
-        detalle.push({
-            codr: codr,
-            cantidad: cantidad,
-            tipo_registro: 'MP',
-            unidad: 'UND',
-            valor: 0
-        });
     }
 
     function calcularTotalMeta() {
@@ -630,75 +583,4 @@
     }
 
     $(document).on('input', 'input[name="meta_cant[]"]', calcularTotalMeta);
-
-    $('form').on('submit', function(e) {
-
-        let detalle = [];
-        let fecha = $('input[name="fecha"]').val();
-        let fechent = $('input[name="fechent"]').val();
-        let satelite = $('select[name="satelite"]').val();
-
-        if (!fecha || !fechent) {
-            alert('Debe ingresar las fechas');
-            e.preventDefault();
-            return;
-        }
-
-        if (fechent < fecha) {
-            alert('La fecha de entrega no puede ser menor a la fecha');
-            e.preventDefault();
-            return;
-        }
-        if (!satelite) {
-            alert('Debe ingresar el satélite');
-            e.preventDefault();
-            return;
-        }
-
-        // =========================
-        // MATERIA PRIMA
-        // =========================
-        $('input[name="entrega_codr[]"]').each(function(i) {
-
-            let codr = $(this).val();
-            let cantidad = $('input[name="entrega_cant[]"]').eq(i).val();
-
-            if (codr && cantidad > 0) {
-
-                detalle.push({
-                    codr: codr,
-                    cantidad: cantidad,
-                    tipo_registro: 'MP'
-                });
-
-            }
-
-        });
-
-        // =========================
-        // METAS
-        // =========================
-        $('input[name="meta_codr[]"]').each(function(i) {
-
-            let codr = $(this).val();
-            let talla = $('input[name="meta_talla[]"]').eq(i).val();
-            let cantidad = $('input[name="meta_cant[]"]').eq(i).val();
-
-            if (codr && cantidad > 0) {
-
-                detalle.push({
-                    codr: codr,
-                    codtalla: talla,
-                    cantidad: cantidad,
-                    tipo_registro: 'META'
-                });
-
-            }
-
-        });
-
-        // Guardar en hidden
-        $('#detalle_json').val(JSON.stringify(detalle));
-
-    });
 </script>

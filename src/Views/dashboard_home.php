@@ -188,7 +188,7 @@ $user = $_SESSION['user'];
         </a>
 
        <!-- Procesos a OPRs -->
-        <a href="/epp/create"
+        <a href="orden-produccion/avance"
             class="bg-gray-500 hover:bg-gray-600 text-white rounded-2xl shadow-lg p-6
               flex flex-col items-center justify-center text-center
               transition transform hover:-translate-y-1">

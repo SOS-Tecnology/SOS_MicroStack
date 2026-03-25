@@ -13,7 +13,7 @@ unset($_SESSION['errors']);
 </head>
 
 <body class="min-h-screen flex items-center justify-center
-             bg-gradient-to-br from-blue-600 to-blue-800">
+             bg-gradient-to-br from-blue-800 to-blue-400">
 
     <div class="flex items-center justify-center min-h-screen">
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">

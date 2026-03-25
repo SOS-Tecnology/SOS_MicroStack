@@ -224,7 +224,7 @@ class OrdenProdController
             'h.documento',
             'h.fecha',
             'h.fechent',
-            'h.estadorm',
+            'h.estado',
             'c.nombrecli(nombrecli)'
         ], [
             'h.tm' => 'OPR',
@@ -414,6 +414,7 @@ class OrdenProdController
                     'tiempo_unit' => $tiempo_unit,
                     'cantidad' => $cantidad_mostrar,
                     'tiempo_total' => $tiempo_total,
+                    'ft_id' => $ft_id,
                     'modo_tiempo' => $modo_tiempo,
                     'comentario' => $p['comentario']
                 ];
@@ -568,4 +569,241 @@ class OrdenProdController
             ->withHeader("Location", "/epp/ver/" . $numero)
             ->withStatus(302);
     }
+
+    public function avance(Request $request, Response $response, array $args)
+    {
+
+        $oprs = $this->db->select('cabezamov (h)', [
+
+            '[>]geclientes (c)' => ['codcp' => 'codcli'],
+
+            '[>]cuerpomov (d)' => [
+                'tm' => 'tm',
+                'prefijo' => 'prefijo',
+                'documento' => 'documento'
+            ]
+
+        ], [
+
+            'h.documento',
+            'h.fecha',
+            'h.fechent',
+            'h.estado',
+
+            'c.nombrecli(nombrecli)',
+
+            'total_prendas' => $this->db->raw('COALESCE(SUM(d.cantidad),0)')
+
+        ], [
+
+            'h.tm' => 'OPR',
+
+            'GROUP' => [
+                'h.documento',
+                'h.fecha',
+                'h.fechent',
+                'h.estado',
+                'c.nombrecli'
+            ],
+
+            'ORDER' => [
+                'h.fecha' => 'DESC'
+            ]
+
+        ]);
+
+        return renderView(
+            $response,
+            __DIR__ . '/../Views/orden-produccion/avance.php',
+            'Avance en OPR',
+            [
+                'oprs' => $oprs
+            ]
+        );
+    }
+
+    public function verAvance(Request $request, Response $response, array $args)
+    {
+        $documento = $args['documento'];
+        $prefijo   = "OP";
+
+        // ===============================
+        // CABECERA OPR
+        // ===============================
+        $opr = $this->db->get("cabezamov (h)", [
+            "[>]geclientes (c)" => ["codcp" => "codcli"]
+        ], [
+            "h.documento",
+            "h.prefijo",
+            "h.fecha",
+            "h.fechent",
+            "h.estado",
+            "c.nombrecli(nombrecli)"
+        ], [
+            "h.tm"        => "OPR",
+            "h.documento" => $documento,
+            "h.prefijo"   => $prefijo
+        ]);
+
+        if (!$opr) {
+            die("No existe la OPR");
+        }
+
+        // ===============================
+        // DETALLE OPR
+        // ===============================
+        $items = $this->db->select("cuerpomov (d)", [
+            "[>]inrefinv (i)" => ["codr" => "codr"]
+        ], [
+            "d.codr",
+            "d.cantidad",
+            "i.ref_fabrica(id_producto_base)"
+        ], [
+            "d.tm"        => "OPR",
+            "d.documento" => $documento,
+            "d.prefijo"   => $prefijo
+        ]);
+
+        // ===============================
+        // AGRUPAR POR FT
+        // ===============================
+        $fts = [];
+
+        foreach ($items as $it) {
+
+            $id_producto_base = $it['id_producto_base'];
+
+            $ft = $this->db->get("fichas_tecnicas", "id", [
+                "id_producto_base" => $id_producto_base
+            ]);
+
+            if (!$ft) continue;
+
+            if (!isset($fts[$ft])) {
+                $fts[$ft] = [
+                    'ft_id' => $ft,
+                    'cantidad_total' => 0,
+                    'procesos' => []
+                ];
+            }
+
+            $fts[$ft]['cantidad_total'] += $it['cantidad'];
+        }
+
+        // ===============================
+        // PROCESOS POR FT
+        // ===============================
+        foreach ($fts as $ft_id => &$ft) {
+
+            $procesos = $this->db->select("ficha_tecnica_procesos (ftp)", [
+                "[>]procesos_ft (p)" => ["codigo_proceso" => "id"]
+            ], [
+                "ftp.orden",
+                "ftp.nombre_proceso",
+                "ftp.ejecutable_en",
+                "ftp.tiempo_minutos",
+                "p.modo_tiempo"
+            ], [
+                "ftp.id_ficha_tecnica" => $ft_id,
+                "ftp.activo" => 1,
+                "ORDER" => ["ftp.orden" => "ASC"]
+            ]);
+
+            foreach ($procesos as $p) {
+
+                $tiempo_unit = $p['tiempo_minutos'] ?? 0;
+                $modo_tiempo = $p['modo_tiempo'] ?? 'POR_UNIDAD';
+
+                if ($modo_tiempo === 'TIEMPO_FIJO') {
+                    $tiempo_total = $tiempo_unit;
+                    $cantidad = '-';
+                } else {
+                    $tiempo_total = $tiempo_unit * $ft['cantidad_total'];
+                    $cantidad = $ft['cantidad_total'];
+                }
+
+                $ft['procesos'][] = [
+                    'orden' => $p['orden'],
+                    'proceso' => $p['nombre_proceso'],
+                    'ejecutable_en' => $p['ejecutable_en'],
+                    'tiempo_unit' => $tiempo_unit,
+                    'cantidad' => $cantidad,
+                    'tiempo_total' => $tiempo_total
+                ];
+            }
+        }
+
+        $total_prendas = array_sum(array_column($items, 'cantidad'));
+
+        return renderView(
+            $response,
+            __DIR__ . '/../Views/orden-produccion/ver_avance.php',
+            "Avance OPR #" . $documento,
+            [
+                'opr' => $opr,
+                'fts' => $fts,
+                'total_prendas' => $total_prendas
+            ]
+        );
+    }
+
+   public function procesos($request, $response, $args)
+{
+    $documento = $args['documento']; // OPR
+    $proceso   = urldecode($args['proceso']);
+
+    // ===============================
+    // OBTENER ID DEL PROCESO
+    // ===============================
+    $procesoData = $this->db->get("procesos_ft", "*", [
+        "nombre" => $proceso
+    ]);
+
+    $proceso_id = $procesoData['id'] ?? null;
+
+    // ===============================
+    // VALIDAR SI EXISTEN EPP 🔴
+    // ===============================
+    $existenEpp = $this->db->has("cabezamov", [
+        "tm" => "EPP",
+        "tmaux"   => "OPR",
+        "prefaux" => "OP",
+        "docaux"  => $documento,
+        "proceso_id" => $proceso_id
+    ]);
+
+    // ===============================
+    // LISTADO EPP / RPP
+    // ===============================
+    $movimientos = $this->db->select("cabezamov", [
+        "[>]provee" => ["codcp" => "codp"]
+    ], [
+        "cabezamov.tm",
+        "cabezamov.documento",
+        "cabezamov.fecha",
+        "cabezamov.estado",
+        "cabezamov.proceso_id",
+        "provee.nombre(proveedor)"
+    ], [
+        "cabezamov.tm" => ["EPP", "RPP"],
+        "cabezamov.tmaux"   => "OPR",
+        "cabezamov.prefaux" => "OP",
+        "cabezamov.docaux"  => $documento,
+        "cabezamov.proceso_id" => $proceso_id,
+        "ORDER" => ["cabezamov.documento" => "DESC"]
+    ]);
+
+    return renderView(
+        $response,
+        __DIR__ . '/../Views/orden-produccion/procesos.php',
+        "Gestión de Proceso",
+        [
+            'movimientos' => $movimientos,
+            'documento'   => $documento,
+            'proceso'     => $proceso ?? '',
+            'proceso_id'  => $proceso_id ?? 0,
+            'existenEpp'  => $existenEpp // 🔴 NUEVO
+        ]
+    );
+}
 }

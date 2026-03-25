@@ -39,7 +39,7 @@ class EppController
     // =========================
     // CREAR
     // =========================
-    public function create($request, $response)
+    public function create($request, $response, $args = [])
     {
 
         // Obtener consecutivo
@@ -50,11 +50,10 @@ class EppController
 
         $nuevoConsecutivo = $ultimo ? $ultimo + 1 : 1;
         $nextEpp = $this->db->query("
-        SELECT IFNULL(MAX(documento)+1,1) AS num
-        FROM cabezamov
-        WHERE tm='EPP'
-        ")->fetch()['num'];
-        $nextEpp = ($max ?? 0) + 1;
+            SELECT IFNULL(MAX(documento)+1,1) AS num
+            FROM cabezamov
+            WHERE tm='EPP'
+            ")->fetch()['num'];
 
         $oprs = $this->db->select("cabezamov", [
             "[>]geclientes" => ["codcp" => "codcli"]
@@ -89,7 +88,9 @@ class EppController
             "id",
             "nombre",
             "tipo",
-            "modo_tiempo"
+            "modo_tiempo",
+            "entrada_tipo",
+            "salida_tipo"
         ]);
 
         $personal = $this->db->select("personal", [
@@ -99,102 +100,235 @@ class EppController
             "cargo"
         ]);
 
+        // Parámetros desde Avance OPR
+        $opr_param = $args['documento'] ?? null;
+        $ft_param = $args['ft_id'] ?? null;
+        $proceso_param = isset($args['proceso']) ? urldecode($args['proceso']) : null;
+
         return renderView($response, __DIR__ . '/../Views/Epp/create.php', "Nuevo Envío a Proceso", [
             'consecutivo' => $nuevoConsecutivo,
             'satelites'   => $satelites,
             'procesos'    => $procesos,
-            'personal' => $personal,
+            'personal'    => $personal,
             'oprs'        => $oprs,
-            'nextEpp'     => $nextEpp
+            'nextEpp'     => $nextEpp,
+
+            // NUEVOS
+            'opr_param' => $opr_param,
+            'ft_param' => $ft_param,
+            'proceso_param' => $proceso_param
         ]);
     }
 
-    // =========================
-    // GUARDAR
-    // =========================
+    // =====================================================
+    // GUARDAR DOCUMENTO EPP (ENVÍO A PROCESO)
+    // =====================================================
     public function store($request, $response)
     {
 
-        $data = $request->getParsedBody();
+        // -------------------------------------------------
+        // 1. RECIBIR DATOS DEL FORMULARIO
+        // -------------------------------------------------
 
-        // =========================
-        // INSERTAR CABECERA
-        // =========================
+        $data = $request->getParsedBody();
+        $data['detalle'] = json_decode($data['detalle_json'], true);
+
+        if (empty($data['fecha']) || empty($data['fechent'])) {
+            $_SESSION['error'] = "Debe ingresar las fechas";
+
+            return $response
+                ->withHeader('Location', '/epp/create')
+                ->withStatus(302);
+        }
+
+        if ($data['fechent'] < $data['fecha']) {
+            $_SESSION['error'] = "Debe ingresar las fechas";
+
+            return $response
+                ->withHeader('Location', '/epp/create')
+                ->withStatus(302);
+        }
+        //  echo "<pre>";
+        //  print_r($request->getParsedBody());
+        //  exit;
+
+        // -------------------------------------------------
+        // 2. FORMATEAR DOCUMENTO (00000001)
+        // -------------------------------------------------
+
+        $documento = str_pad($data['documento'], 8, "0", STR_PAD_LEFT);
+
+        $codcp_opr = $this->db->get("cabezamov", "codcp", [
+            "tm"        => "OPR",
+            "prefijo"   => "OP",
+            "documento" => $data['opr']
+        ]);
+        // -------------------------------------------------
+        // 3. INSERTAR CABECERA
+        // -------------------------------------------------
 
         $this->db->insert("cabezamov", [
 
             "tm"        => "EPP",
             "prefijo"   => "EPP",
-            "documento" => $data['documento'],
+            "documento" => $documento,
+
             "fecha"     => $data['fecha'],
             "fechent"   => $data['fechent'],
-            "codp"      => $data['codp'],
+
+            "codcp"     => $codcp_opr,  // cliente o proveedor
             "comen"     => $data['comen'] ?? '',
-            "estado"    => "Abierto",
+
+            "tmaux"     => "OPR",
+            "prefaux"   => "OP",
+            "docaux"    => $data['opr'],
+
+            "proceso_id"   => $data['proceso'] ?? 0,
+            "satelite_id"  => $data['satelite'] ?? 0,
+            "responsable_id" => $data['personal'] ?? 0,
+            "comen"        => $data['observaciones'] ?? '',
+
+            "estado"    => "",
+
             "fechacrea" => date('Y-m-d H:i:s'),
-            "usucrea"   => $_SESSION['usuario'] ?? 'sistema'
+            "usuacrea"  => $_SESSION['usuario'] ?? 'sistema',
+
+            "opr_id"     => $data['opr'] ?? null,
+            "proceso_id" => $data['proceso'] ?? null,
+            "satelite_id" => $data['satelite'] ?? null
 
         ]);
 
         $idMovimiento = $this->db->id();
 
-        // =========================
-        // INSERTAR DETALLE
-        // =========================
+
+        // -------------------------------------------------
+        // 4. INSERTAR DETALLE
+        // -------------------------------------------------
 
         if (!empty($data['detalle']) && is_array($data['detalle'])) {
 
             foreach ($data['detalle'] as $item) {
 
+                // Evitar registros vacíos
+                if (($item['cantidad'] ?? 0) <= 0) {
+                    continue;
+                }
+
                 $this->db->insert("cuerpomov", [
 
-                    "idcabezamov" => $idMovimiento,
+                    "tm"        => "EPP",
+                    "prefijo"   => "EPP",
+                    "documento" => $documento,
+
+                    // RELACIÓN CON OPR
+                    "tmaux"     => "OPR",
+                    "prefaux"   => "OP",
+                    "docaux"    => $data['opr'],
+
                     "codr"        => $item['codr'] ?? null,
                     "codtalla"    => $item['codtalla'] ?? null,
-                    "proceso_id"  => $item['proceso_id'] ?? null,
-                    "cantidad"    => $item['cantidad'] ?? 0,
-                    "cantent"     => 0,
-                    "tipo_registro" => $item['tipo_registro'] ?? 'META',
-                    "unidad"      => $item['unidad'] ?? null
+                    "codcolor"    => $item['codcolor'] ?? null,
+                    "unidad"       => $item['unidad'] ?? 'UND',
+                    "proceso_id"  => $item['proceso_id'] ?? $data['proceso'] ?? null,
 
+                    "cantidad"    => $item['cantidad'],
+                    "cantent"     => 0,
+
+                    "valor" => $item['valor_unitario'] ?? 0,
+
+                    "tipo_registro" => $item['tipo_registro'] ?? 'META'
                 ]);
             }
         }
 
-        // =========================
-        // ACTUALIZAR CONSECUTIVO
-        // =========================
+
+        // -------------------------------------------------
+        // 5. ACTUALIZAR CONSECUTIVO
+        // -------------------------------------------------
+        $consecutivo = $this->db->get("inconsemov", "ultmov", [
+            "prefijo" => "EPP",
+            "tipomv"  => "EPP"
+        ]);
+
+        $numero = intval($consecutivo) + 1;
+
+        $nuevoConsecutivo = str_pad($numero, 8, "0", STR_PAD_LEFT);
 
         $this->db->update("inconsemov", [
-            "ultmov[+]" => 1
+            "ultmov" => $nuevoConsecutivo
         ], [
             "prefijo" => "EPP",
             "tipomv"  => "EPP"
         ]);
 
+        // -------------------------------------------------
+        // 6. REDIRECCIONAR
+        // -------------------------------------------------
+
         return $response
-            ->withHeader('Location', '/epp')
+            ->withHeader('Location', '/orden-produccion/avance/ver/' . $data['opr'])
             ->withStatus(302);
     }
+
+
     // =========================
     // VER
     // =========================
     public function show($request, $response, $args)
     {
 
-        $id = $args['id'];
+        $documento = $args['documento'];
 
-        $cab = $this->db->get("cabezamov", "*", [
-            "id" => $id
+        // CABECERA + SATÉLITE + RESPONSABLE
+        $cab = $this->db->get("cabezamov", [
+
+            "[>]satelites"   => ["satelite_id" => "id"],
+            "[>]provee"      => ["satelites.id_proveedor" => "codp"],
+            "[>]personal"    => ["responsable_id" => "id"],
+            "[>]procesos_ft" => ["proceso_id" => "id"]
+
+        ], [
+
+            // CABECERA
+            "cabezamov.documento",
+            "cabezamov.fecha",
+            "cabezamov.fechent",
+            "cabezamov.estado",
+            "cabezamov.comen",
+            "cabezamov.docaux",
+            "cabezamov.proceso_id",
+
+            // SATÉLITE (CORRECTO)
+            "provee.nombre(satelite)",
+
+            // OTROS
+            "personal.nombres(responsable)",
+            "procesos_ft.nombre(proceso_nombre)"
+
+        ], [
+            "cabezamov.tm"        => "EPP",
+            "cabezamov.prefijo"   => "EPP",
+            "cabezamov.documento" => $documento
         ]);
 
+        // DETALLE
         $det = $this->db->select("cuerpomov", "*", [
-            "idcabezamov" => $id
+            "tm"        => "EPP",
+            "prefijo"   => "EPP",
+            "documento" => $documento
+        ]);
+
+
+        $procesoNombre = $this->db->get("procesos_ft", "nombre", [
+            "id" => $cab['proceso_id']
         ]);
 
         return renderView($response, __DIR__ . '/../Views/Epp/show.php', "Detalle EPP", [
             'cab' => $cab,
-            'det' => $det
+            'det' => $det,
+            'documento' => $documento,
+            'procesoNombre' => $procesoNombre
         ]);
     }
 
@@ -204,14 +338,19 @@ class EppController
     public function print($request, $response, $args)
     {
 
-        $id = $args['id'];
-
+        $id = $args['documento'];
+        $tm        = "EPP";
+        $prefijo   = "EPP";
         $cab = $this->db->get("cabezamov", "*", [
-            "id" => $id
+            "documento" => $id,
+            "tm" => $tm,
+            "prefijo" => $prefijo
         ]);
 
         $det = $this->db->select("cuerpomov", "*", [
-            "idcabezamov" => $id
+            "documento" => $id,
+            "tm" => $tm,
+            "prefijo" => $prefijo
         ]);
 
         return renderView($response, __DIR__ . '/../Views/Epp/print.php', "Impresión EPP", [
@@ -222,7 +361,7 @@ class EppController
 
     public function getDataByOpr($request, $response, $args)
     {
-        $opr_id = $args['id'];
+        $opr_id = $args['documento'];
 
         // META (productos)
         $meta = $this->db->select("cuerpomov", [
@@ -253,6 +392,7 @@ class EppController
 
         return $response->withHeader('Content-Type', 'application/json');
     }
+
     public function getDataFromOpr($request, $response, $args)
     {
         $documento = $args['documento'];
@@ -268,6 +408,7 @@ class EppController
             "inrefinv.descr(producto_nombre)",
             "inrefinv.ref_fabrica(id_producto_base)",
             "cuerpomov.codtalla",
+            "cuerpomov.codcolor",
             "cuerpomov.cantidad"
         ], [
             "cuerpomov.documento" => $documento,
@@ -285,6 +426,7 @@ class EppController
                 "codr" => $it['codr'],
                 "producto" => $it['producto_nombre'],
                 "codtalla" => $it['codtalla'],
+                "codcolor" => $it['codcolor'],
                 "cantidad" => $it['cantidad']
             ];
 
@@ -365,6 +507,7 @@ class EppController
             "inrefinv.descr(producto)",
             "inrefinv.ref_fabrica(id_producto_base)",
             "cuerpomov.codtalla",
+            "cuerpomov.codcolor",
             "cuerpomov.cantidad"
         ], [
             "cuerpomov.documento" => $documento,
@@ -385,6 +528,7 @@ class EppController
                 "codr" => $it['codr'],
                 "descr" => $it['producto'],
                 "codtalla" => $it['codtalla'],
+                "codcolor" => $it['codcolor'],
                 "cantidad" => $it['cantidad']
             ];
 

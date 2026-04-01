@@ -11,7 +11,18 @@
         </h2>
 
     </div>
+    <form method="GET" class="mb-4 flex gap-2">
 
+        <input type="text" name="cliente"
+            placeholder="Filtrar por cliente..."
+            value="<?= $_GET['cliente'] ?? '' ?>"
+            class="border px-3 py-2 rounded w-64">
+
+        <button class="bg-blue-600 text-white px-4 py-2 rounded">
+            Filtrar
+        </button>
+
+    </form>
 
     <div class="bg-white shadow rounded-xl overflow-hidden">
 
@@ -24,9 +35,11 @@
                     <th class="px-4 py-3 text-left">Documento</th>
                     <th class="px-4 py-3 text-left">Fecha</th>
                     <th class="px-4 py-3 text-left">Cliente</th>
+                    <th class="px-4 py-3 text-left">O.Pedido</th>                    
                     <th class="px-4 py-3 text-left">Fecha Entrega</th>
-                    <th class="px-4 py-3 text-left">Total Prendas</th>
-                    <th class="px-4 py-3 text-left">Estado</th>
+                    <th class="px-4 py-3 text-left w-24">Total Prendas</th>
+                    <th class="px-4 py-3 text-left">Días</th>
+                    <th class="px-4 py-3 text-left">Estado Prod</th>
                     <th class="px-4 py-3 text-center">Acciones</th>
 
                 </tr>
@@ -37,6 +50,11 @@
 
                 <?php foreach ($oprs as $opr): ?>
 
+                    <?php
+                    $hoy = new DateTime();
+                    $entrega = new DateTime($opr['fechent']);
+                    $dias = (int)$hoy->diff($entrega)->format('%r%a');
+                    ?>
                     <tr class="hover:bg-gray-50">
 
                         <td class="px-4 py-3 font-mono">
@@ -49,8 +67,16 @@
 
                         <td class="px-4 py-3">
                             <?= $opr['nombrecli'] ?>
-                        </td>
 
+                         </td>
+
+                       <td class="px-4 py-3">                         
+                           <?php if (!empty($opr['op'])): ?>
+                                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                    <?= 'OP-' . str_pad($opr['op'], 8, '0', STR_PAD_LEFT) ?>
+                                </span>
+                            <?php endif; ?>
+                        </td>
                         <td class="px-4 py-3">
                             <?= $opr['fechent'] ?>
                         </td>
@@ -58,19 +84,28 @@
                         <td class="px-4 py-3 font-semibold">
                             <?= number_format($opr['total_prendas'] ?? 0) ?>
                         </td>
+                        <td class="px-4 py-3">
+                            <?php if ($dias < 0): ?>
+                                <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
+                                    <?= $dias ?> días
+                                </span>
+                            <?php elseif ($dias <= 5): ?>
+                                <span class="bg-yellow-100 text-yellow-700 px-2 py-1 rounded text-xs">
+                                    <?= $dias ?> días
+                                </span>
+                            <?php else: ?>
+                                <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
+                                    <?= $dias ?> días
+                                </span>
+                            <?php endif; ?>
+                        </td>
 
                         <td class="px-4 py-3">
 
-                            <?php if ($opr['estado'] == 'C'): ?>
+                            <?php if ($opr['tiene_epp'] > 0): ?>
 
-                                <span class="bg-green-100 text-green-700 px-2 py-1 rounded text-xs">
-                                    Completado
-                                </span>
-
-                            <?php elseif ($opr['estado'] == 'A'): ?>
-
-                                <span class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs">
-                                    Anulado
+                                <span class="bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs">
+                                    En Proceso
                                 </span>
 
                             <?php else: ?>
@@ -82,7 +117,6 @@
                             <?php endif; ?>
 
                         </td>
-
                         <td class="px-4 py-3 text-center">
 
                             <a href="/orden-produccion/avance/ver/<?= $opr['documento'] ?>"

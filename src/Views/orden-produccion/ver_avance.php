@@ -13,11 +13,8 @@
 
     </div>
 
-
     <!-- CABECERA -->
-
     <div class="bg-white shadow rounded-xl p-6 mb-6">
-
         <div class="grid grid-cols-4 gap-6">
 
             <div>
@@ -43,103 +40,101 @@
             </div>
 
         </div>
-
     </div>
 
+    <!-- PROCESOS -->
+    <?php foreach ($fts as $ft): ?>
 
-    <!-- DETALLE PRODUCTOS -->
+        <div class="bg-white shadow rounded-xl mb-6 overflow-hidden">
 
-    <div class="bg-white shadow rounded-xl overflow-hidden">
+            <div class="bg-gray-100 px-4 py-2 font-semibold">
+                Ficha Técnica #<?= $ft['ft_id'] ?> |
+                Cantidad: <?= $ft['cantidad_total'] ?>
+            </div>
 
-        <table class="w-full text-sm">
+            <table class="w-full text-sm">
 
-            <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                <thead class="bg-gray-50 text-xs uppercase text-gray-600">
+                    <tr>
+                        <th class="px-4 py-2 text-left">Orden</th>
+                        <th class="px-4 py-2 text-left">Proceso</th>
+                        <th class="px-4 py-2 text-left">Ejecutable en</th>
+                        <th class="px-4 py-2 text-left">Meta</th>
+                        <th class="px-4 py-2 text-left">EPP</th>
+                        <th class="px-4 py-2 text-left">RPP</th>
+                        <th class="px-4 py-2 text-left">Avance</th>
+                        <th class="px-4 py-2 text-left">Acciones</th>
+                    </tr>
+                </thead>
 
-                <tr>
+                <tbody class="divide-y">
 
-                    <th class="px-4 py-3 text-left">Referencia</th>
-                    <th class="px-4 py-3 text-left">Talla</th>
-                    <th class="px-4 py-3 text-left">Color</th>
-                    <th class="px-4 py-3 text-left">Cantidad</th>
-                    <th class="px-4 py-2 text-left">Acciones</th>
+                    <?php foreach ($ft['procesos'] as $p): ?>
 
-                </tr>
+                        <?php
+                        $meta = $p['cantidad_proceso'] ?? 0;
+                        $epp  = $p['epp'] ?? 0;
+                        $rpp  = $p['rpp'] ?? 0;
 
-            </thead>
+                        $porcentaje = $meta > 0 ? round(($rpp / $meta) * 100) : 0;
+                        ?>
 
-            <tbody class="divide-y">
+                        <tr>
 
-                <?php foreach ($fts as $ft): ?>
+                            <td class="px-4 py-2"><?= $p['orden'] ?></td>
 
-                    <div class="bg-white shadow rounded-lg mb-6 overflow-hidden">
+                            <td class="px-4 py-2"><?= $p['nombre_proceso'] ?></td>
 
-                        <table class="w-full text-sm">
+                            <td class="px-4 py-2"><?= $p['ejecutable_en'] ?></td>
 
-                            <thead class="bg-gray-100">
+                            <td class="px-4 py-2 font-semibold"><?= $meta ?></td>
 
-                                <tr>
+                            <td class="px-4 py-2 text-blue-600"><?= $epp ?></td>
 
-                                    <th class="px-4 py-2">Orden</th>
-                                    <th class="px-4 py-2">Proceso</th>
-                                    <th class="px-4 py-2">Ejecutable en</th>
-                                    <th class="px-4 py-2">Cantidad</th>
-                                    <th class="px-4 py-2">Tiempo total</th>
-                                    <th class="px-4 py-2">Acciones</th>
+                            <td class="px-4 py-2 text-green-600"><?= $rpp ?></td>
 
-                                </tr>
+                            <td class="px-4 py-2 w-48">
 
-                            </thead>
+                                <div class="text-xs mb-1">
+                                    <?= $porcentaje ?>%
+                                </div>
 
-                            <tbody>
+                                <div class="w-full bg-gray-200 h-2 rounded">
+                                    <div class="bg-green-500 h-2 rounded"
+                                        style="width: <?= $porcentaje ?>%">
+                                    </div>
+                                </div>
 
-                                <?php foreach ($ft['procesos'] as $p): ?>
+                            </td>
 
-                                    <tr class="border-t">
+                            <td class="px-4 py-2">
 
-                                        <td class="px-4 py-2"><?= $p['orden'] ?></td>
+                                <div class="flex gap-2">
 
-                                        <td class="px-4 py-2"><?= $p['proceso'] ?></td>
+                                    <a href="/orden-produccion/procesos/<?= $opr['documento'] ?>/<?= $p['id_proceso'] ?>"
+                                        class="text-blue-600 hover:underline text-sm">
+                                        📤 EPP
+                                    </a>
 
-                                        <td class="px-4 py-2"><?= $p['ejecutable_en'] ?></td>
+                                    <a href="/orden-produccion/procesos/<?= $opr['documento'] ?>/<?= $p['id_proceso'] ?>"
+                                        class="text-green-600 hover:underline text-sm">
+                                        📥 RPP
+                                    </a>
 
-                                        <td class="px-4 py-2"><?= $p['cantidad'] ?></td>    
+                                </div>
 
-                                        <td class="px-4 py-2"><?= $p['tiempo_total'] ?></td>
+                            </td>
 
-                                        <td class="px-4 py-2">
+                        </tr>
 
-                                            <div class="flex gap-2">
+                    <?php endforeach; ?>
 
-                                                <a href="/orden-produccion/procesos/<?= $opr['documento'] ?>/<?= urlencode($p['proceso']) ?>"
-                                                    class="text-blue-600 hover:underline text-sm">
-                                                    📤 EPP
-                                                </a>
+                </tbody>
 
-                                                <a href="/orden-produccion/procesos/<?= $opr['documento'] ?>/<?= urlencode($p['proceso']) ?>"
-                                                    class="text-green-600 hover:underline text-sm">
-                                                    📥 RPP
-                                                </a>
+            </table>
 
-                                            </div>
+        </div>
 
-                                        </td>
-
-                                    </tr>
-
-                                <?php endforeach; ?>
-
-                            </tbody>
-
-                        </table>
-
-                    </div>
-
-                <?php endforeach; ?>
-
-            </tbody>
-
-        </table>
-
-    </div>
+    <?php endforeach; ?>
 
 </div>

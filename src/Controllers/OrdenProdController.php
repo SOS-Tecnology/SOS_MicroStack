@@ -570,32 +570,13 @@ class OrdenProdController
             ->withStatus(302);
     }
 
+
     public function avance(Request $request, Response $response, array $args)
     {
-
-        $oprs = $this->db->select('cabezamov (h)', [
-
-            '[>]geclientes (c)' => ['codcp' => 'codcli'],
-
-            '[>]cuerpomov (d)' => [
-                'tm' => 'tm',
-                'prefijo' => 'prefijo',
-                'documento' => 'documento'
-            ]
-
-        ], [
-
-            'h.documento',
-            'h.fecha',
-            'h.fechent',
-            'h.estado',
-
-            'c.nombrecli(nombrecli)',
-
-            'total_prendas' => $this->db->raw('COALESCE(SUM(d.cantidad),0)')
-
-        ], [
-
+        // ===============================
+        // 1. WHERE dinámico
+        // ===============================
+        $where = [
             'h.tm' => 'OPR',
 
             'GROUP' => [
@@ -607,11 +588,62 @@ class OrdenProdController
             ],
 
             'ORDER' => [
-                'h.fecha' => 'DESC'
+                'h.documento' => 'DESC'
+            ]
+        ];
+
+        if (!empty($_GET['cliente'])) {
+            $where['c.nombrecli[~]'] = $_GET['cliente'];
+        }
+
+        // ===============================
+        // 2. CONSULTA PRINCIPAL
+        // ===============================
+        $oprs = $this->db->select('cabezamov (h)', [
+
+            '[>]geclientes (c)' => ['codcp' => 'codcli'],
+
+            '[>]cuerpomov (d)' => [
+                'tm' => 'tm',
+                'prefijo' => 'prefijo',
+                'documento' => 'documento'
+            ],
+
+            // 👇 relación EPP
+            '[>]cabezamov (epp)' => [
+                'documento' => 'docaux'
             ]
 
-        ]);
+        ], [
 
+            'h.documento',
+            'h.fecha',
+            'h.fechent',
+            'h.estado',
+
+            // 👇 CLIENTE
+            'c.nombrecli(nombrecli)',
+
+            // 👇 OP (robusto con agregación)
+            'op' => $this->db->raw('MAX(h.docaux)'),
+
+            // 👇 TOTAL PRENDAS
+            'total_prendas' => $this->db->raw('COALESCE(SUM(d.cantidad),0)'),
+
+            // 👇 ESTADO EPP
+            'tiene_epp' => $this->db->raw("
+            COUNT(DISTINCT CASE 
+                WHEN epp.tmaux = 'OPR' THEN epp.documento 
+            END)
+        ")
+
+        ], $where);
+        // echo '<pre>'; 
+        // print_r($oprs); 
+        // exit;
+        // ===============================
+        // 3. RENDER
+        // ===============================
         return renderView(
             $response,
             __DIR__ . '/../Views/orden-produccion/avance.php',
@@ -691,13 +723,14 @@ class OrdenProdController
         }
 
         // ===============================
-        // PROCESOS POR FT
+        // PROCESOS POR FT + AVANCE
         // ===============================
         foreach ($fts as $ft_id => &$ft) {
 
             $procesos = $this->db->select("ficha_tecnica_procesos (ftp)", [
                 "[>]procesos_ft (p)" => ["codigo_proceso" => "id"]
             ], [
+                "ftp.id(id_proceso)", // 👈 CLAVE
                 "ftp.orden",
                 "ftp.nombre_proceso",
                 "ftp.ejecutable_en",
@@ -709,27 +742,91 @@ class OrdenProdController
                 "ORDER" => ["ftp.orden" => "ASC"]
             ]);
 
-            foreach ($procesos as $p) {
+            $ft['procesos'] = [];
+
+            foreach ($procesos as &$p) {
 
                 $tiempo_unit = $p['tiempo_minutos'] ?? 0;
                 $modo_tiempo = $p['modo_tiempo'] ?? 'POR_UNIDAD';
 
                 if ($modo_tiempo === 'TIEMPO_FIJO') {
                     $tiempo_total = $tiempo_unit;
-                    $cantidad = '-';
+                    $cantidad = 0;
                 } else {
                     $tiempo_total = $tiempo_unit * $ft['cantidad_total'];
                     $cantidad = $ft['cantidad_total'];
                 }
 
-                $ft['procesos'][] = [
-                    'orden' => $p['orden'],
-                    'proceso' => $p['nombre_proceso'],
-                    'ejecutable_en' => $p['ejecutable_en'],
-                    'tiempo_unit' => $tiempo_unit,
-                    'cantidad' => $cantidad,
-                    'tiempo_total' => $tiempo_total
-                ];
+                // ===============================
+                // EPP
+                // ===============================
+                // $p['epp'] = $this->db->sum("cuerpomov (d)", "d.cantidad", [
+
+                //     "[>]cabezamov (h)" => [
+                //         "d.tm"        => "h.tm",
+                //         "d.prefijo"   => "h.prefijo",
+                //         "d.documento" => "h.documento"
+                //     ]
+
+                // ], [
+                //     "h.tm"         => "EPP",
+                //     "h.tmaux"      => "OPR",
+                //     "h.docaux"     => $documento,
+                //     "h.proceso_id" => $p['id_proceso']
+                // ]) ?? 0;
+
+
+                $sql = "
+    SELECT SUM(d.cantidad) as total
+    FROM cuerpomov d
+    INNER JOIN cabezamov h 
+        ON d.tm = h.tm 
+        AND d.prefijo = h.prefijo 
+        AND d.documento = h.documento
+    WHERE 
+        h.tm = 'EPP'
+        AND h.tmaux = 'OPR'
+        AND h.docaux = :documento
+        AND h.proceso_id = :proceso
+";
+
+                $epp = $this->db->query($sql, [
+                    ':documento' => $documento,
+                    ':proceso'   => $p['id_proceso']
+                ])->fetchColumn() ?? 0;
+
+                // ===============================
+                // RPP
+                // ===============================
+
+                $sql = "
+    SELECT SUM(d.cantidad) as total
+    FROM cuerpomov d
+    INNER JOIN cabezamov h 
+        ON d.tm = h.tm 
+        AND d.prefijo = h.prefijo 
+        AND d.documento = h.documento
+    WHERE 
+        h.tm = 'RPP'
+        AND h.tmaux = 'OPR'
+        AND h.docaux = :documento
+        AND h.proceso_id = :proceso
+";
+
+                $rpp = $this->db->query($sql, [
+                    ':documento' => $documento,
+                    ':proceso'   => $p['id_proceso']
+                ])->fetchColumn() ?? 0;
+                // ===============================
+                // OTROS DATOS ÚTILES
+                // ===============================
+                $p['epp'] = (float) $epp;  // ← línea nueva
+                $p['rpp'] = (float) $rpp;  // ← línea nueva
+                $p['cantidad_proceso'] = $cantidad;
+                $p['tiempo_total']     = $tiempo_total;
+
+                // Guardar proceso
+                $ft['procesos'][] = $p;
             }
         }
 
@@ -747,63 +844,63 @@ class OrdenProdController
         );
     }
 
-   public function procesos($request, $response, $args)
-{
-    $documento = $args['documento']; // OPR
-    $proceso   = urldecode($args['proceso']);
+    public function procesos($request, $response, $args)
+    {
+        $documento = $args['documento']; // OPR
+        $proceso   = urldecode($args['proceso']);
 
-    // ===============================
-    // OBTENER ID DEL PROCESO
-    // ===============================
-    $procesoData = $this->db->get("procesos_ft", "*", [
-        "nombre" => $proceso
-    ]);
+        // ===============================
+        // OBTENER ID DEL PROCESO
+        // ===============================
+        $procesoData = $this->db->get("procesos_ft", "*", [
+            "nombre" => $proceso
+        ]);
 
-    $proceso_id = $procesoData['id'] ?? null;
+        $proceso_id = $procesoData['id'] ?? null;
 
-    // ===============================
-    // VALIDAR SI EXISTEN EPP 🔴
-    // ===============================
-    $existenEpp = $this->db->has("cabezamov", [
-        "tm" => "EPP",
-        "tmaux"   => "OPR",
-        "prefaux" => "OP",
-        "docaux"  => $documento,
-        "proceso_id" => $proceso_id
-    ]);
+        // ===============================
+        // VALIDAR SI EXISTEN EPP 🔴
+        // ===============================
+        $existenEpp = $this->db->has("cabezamov", [
+            "tm" => "EPP",
+            "tmaux"   => "OPR",
+            "prefaux" => "OP",
+            "docaux"  => $documento,
+            "proceso_id" => $proceso_id
+        ]);
 
-    // ===============================
-    // LISTADO EPP / RPP
-    // ===============================
-    $movimientos = $this->db->select("cabezamov", [
-        "[>]provee" => ["codcp" => "codp"]
-    ], [
-        "cabezamov.tm",
-        "cabezamov.documento",
-        "cabezamov.fecha",
-        "cabezamov.estado",
-        "cabezamov.proceso_id",
-        "provee.nombre(proveedor)"
-    ], [
-        "cabezamov.tm" => ["EPP", "RPP"],
-        "cabezamov.tmaux"   => "OPR",
-        "cabezamov.prefaux" => "OP",
-        "cabezamov.docaux"  => $documento,
-        "cabezamov.proceso_id" => $proceso_id,
-        "ORDER" => ["cabezamov.documento" => "DESC"]
-    ]);
+        // ===============================
+        // LISTADO EPP / RPP
+        // ===============================
+        $movimientos = $this->db->select("cabezamov", [
+            "[>]provee" => ["codcp" => "codp"]
+        ], [
+            "cabezamov.tm",
+            "cabezamov.documento",
+            "cabezamov.fecha",
+            "cabezamov.estado",
+            "cabezamov.proceso_id",
+            "provee.nombre(proveedor)"
+        ], [
+            "cabezamov.tm" => ["EPP", "RPP"],
+            "cabezamov.tmaux"   => "OPR",
+            "cabezamov.prefaux" => "OP",
+            "cabezamov.docaux"  => $documento,
+            "cabezamov.proceso_id" => $proceso_id,
+            "ORDER" => ["cabezamov.documento" => "DESC"]
+        ]);
 
-    return renderView(
-        $response,
-        __DIR__ . '/../Views/orden-produccion/procesos.php',
-        "Gestión de Proceso",
-        [
-            'movimientos' => $movimientos,
-            'documento'   => $documento,
-            'proceso'     => $proceso ?? '',
-            'proceso_id'  => $proceso_id ?? 0,
-            'existenEpp'  => $existenEpp // 🔴 NUEVO
-        ]
-    );
-}
+        return renderView(
+            $response,
+            __DIR__ . '/../Views/orden-produccion/procesos.php',
+            "Gestión de Proceso",
+            [
+                'movimientos' => $movimientos,
+                'documento'   => $documento,
+                'proceso'     => $proceso ?? '',
+                'proceso_id'  => $proceso_id ?? 0,
+                'existenEpp'  => $existenEpp // 🔴 NUEVO
+            ]
+        );
+    }
 }

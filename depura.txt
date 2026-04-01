@@ -1,0 +1,7 @@
+
+echo "<pre>";
+echo "DOCUMENTO: " . $documento . "\n";
+echo "PROCESO_ID: " . $p['id_proceso'] . "\n";
+print_r($p);
+echo "</pre>";
+die();

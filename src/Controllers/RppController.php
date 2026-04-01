@@ -86,6 +86,33 @@ class RppController
             "cm.prefijo"   => "EPP",
             "cm.documento" => $epp
         ]);
+        // ===============================
+        // 3. TRAER RECIBIDO EN RPP 🔥
+        // ===============================
+        $rppRecibido = $this->db->select("cuerpomov", [
+            "codr",
+            "codtalla",
+            "codcolor",
+            "cantidad"
+        ], [
+            "tm" => "RPP",
+            "prefijo" => "RPP",
+            "docaux" => $epp
+        ]);
+
+        // Agrupar recibido
+        $mapRecibido = [];
+
+        foreach ($rppRecibido as $r) {
+
+            $key = $r['codr'] . '|' . ($r['codtalla'] ?? '') . '|' . ($r['codcolor'] ?? '');
+
+            if (!isset($mapRecibido[$key])) {
+                $mapRecibido[$key] = 0;
+            }
+
+            $mapRecibido[$key] += $r['cantidad'];
+        }
 
         // ===============================
         // 3. SEPARAR MP vs METIS 🔥
@@ -96,8 +123,18 @@ class RppController
 
         foreach ($items as $d) {
 
-            // EJEMPLO: si no tiene talla → es MP
-            if (empty($d['codtalla'])) {
+            $key = $d['coditem'] . '|' . ($d['talla'] ?? '') . '|' . ($d['color'] ?? '');
+
+            $recibido = $mapRecibido[$key] ?? 0;
+            $pendiente = $d['cantidad'] - $recibido;
+
+            // 🔥 SOLO MOSTRAR SI HAY PENDIENTE
+            if ($pendiente <= 0) continue;
+
+            $d['recibido'] = $recibido;
+            $d['pendiente'] = $pendiente;
+
+            if (empty($d['talla'])) {
                 $mp[] = $d;
             } else {
                 $metis[] = $d;
@@ -191,6 +228,25 @@ class RppController
                     "docaux" => $data['epp'],
                     "prefaux" => "EPP",
                     "tmaux"  => "EPP"
+
+                ]);
+
+                // ===============================
+                // ACTUALIZAR CANTENT EN EPP 🔥
+                // ===============================
+                $this->db->update("cuerpomov", [
+
+                    "cantent[+]" => $d['cantidad']
+
+                ], [
+
+                    "tm"        => "EPP",
+                    "prefijo"   => "EPP",
+                    "documento" => $data['epp'],
+
+                    "codr"      => $d['codr'],
+                    "codtalla"  => $d['codtalla'] ?? null,
+                    "codcolor"  => $d['codcolor'] ?? null
 
                 ]);
             }

@@ -844,63 +844,124 @@ class OrdenProdController
         );
     }
 
-    public function procesos($request, $response, $args)
-    {
-        $documento = $args['documento']; // OPR
-        $proceso   = urldecode($args['proceso']);
+ // ==============================================================
+// REEMPLAZAR el método procesos() completo en OrdenProdController
+// Cambios respecto a la versión anterior:
+//   1. Busca proceso por ID (no por nombre) — evita el bug de null
+//   2. Calcula meta, epp_total, rpp_total para las tarjetas resumen
+//   3. Envía 'proceso' como nombre (para el título de la pantalla)
+//   4. Firma con tipado completo (consistente con index/avance/verAvance)
+// ==============================================================
 
-        // ===============================
-        // OBTENER ID DEL PROCESO
-        // ===============================
-        $procesoData = $this->db->get("procesos_ft", "*", [
-            "nombre" => $proceso
-        ]);
+public function procesos(Request $request, Response $response, array $args): Response
+{
+    $documento  = $args['documento'];           // número OPR ej: 00000005
+    $proceso_id = (int) $args['proceso'];       // ID numérico del proceso ej: 110
 
-        $proceso_id = $procesoData['id'] ?? null;
+    // -------------------------------------------------------
+    // 1. DATOS DEL PROCESO (nombre para mostrar en el título)
+    // -------------------------------------------------------
+    $procesoData = $this->db->get("procesos_ft", ["id", "nombre"], [
+        "id" => $proceso_id
+    ]);
 
-        // ===============================
-        // VALIDAR SI EXISTEN EPP 🔴
-        // ===============================
-        $existenEpp = $this->db->has("cabezamov", [
-            "tm" => "EPP",
-            "tmaux"   => "OPR",
-            "prefaux" => "OP",
-            "docaux"  => $documento,
-            "proceso_id" => $proceso_id
-        ]);
-
-        // ===============================
-        // LISTADO EPP / RPP
-        // ===============================
-        $movimientos = $this->db->select("cabezamov", [
-            "[>]provee" => ["codcp" => "codp"]
-        ], [
-            "cabezamov.tm",
-            "cabezamov.documento",
-            "cabezamov.fecha",
-            "cabezamov.estado",
-            "cabezamov.proceso_id",
-            "provee.nombre(proveedor)"
-        ], [
-            "cabezamov.tm" => ["EPP", "RPP"],
-            "cabezamov.tmaux"   => "OPR",
-            "cabezamov.prefaux" => "OP",
-            "cabezamov.docaux"  => $documento,
-            "cabezamov.proceso_id" => $proceso_id,
-            "ORDER" => ["cabezamov.documento" => "DESC"]
-        ]);
-
-        return renderView(
-            $response,
-            __DIR__ . '/../Views/orden-produccion/procesos.php',
-            "Gestión de Proceso",
-            [
-                'movimientos' => $movimientos,
-                'documento'   => $documento,
-                'proceso'     => $proceso ?? '',
-                'proceso_id'  => $proceso_id ?? 0,
-                'existenEpp'  => $existenEpp // 🔴 NUEVO
-            ]
-        );
+    // Si el proceso no existe redirigimos con error limpio
+    if (!$procesoData) {
+        return $response
+            ->withHeader('Location', "/orden-produccion/avance/ver/{$documento}")
+            ->withStatus(302);
     }
+
+    // -------------------------------------------------------
+    // 2. ¿YA EXISTEN EPP para este OPR + proceso?
+    //    Controla si el botón RPP se habilita en la vista
+    // -------------------------------------------------------
+    $existenEpp = $this->db->has("cabezamov", [
+        "tm"         => "EPP",
+        "tmaux"      => "OPR",
+        "docaux"     => $documento,
+        "proceso_id" => $proceso_id
+    ]);
+
+    // -------------------------------------------------------
+    // 3. LISTADO DE MOVIMIENTOS EPP + RPP
+    // -------------------------------------------------------
+    $movimientos = $this->db->select("cabezamov (h)", [
+        "[>]provee (p)" => ["codcp" => "codp"]
+    ], [
+        "h.tm",
+        "h.documento",
+        "h.fecha",
+        "h.estado",
+        "h.proceso_id",
+        "p.nombre(proveedor)"
+    ], [
+        "h.tm"         => ["EPP", "RPP"],
+        "h.tmaux"      => "OPR",
+        "h.docaux"     => $documento,
+        "h.proceso_id" => $proceso_id,
+        "ORDER"        => ["h.documento" => "DESC"]
+    ]);
+
+    // -------------------------------------------------------
+    // 4. MÉTRICAS RESUMEN (meta / epp acumulado / rpp acumulado)
+    //    Se usan en las 4 tarjetas de la vista
+    // -------------------------------------------------------
+
+    // META: total de prendas en la OPR
+    $meta = (int) $this->db->query("
+        SELECT COALESCE(SUM(d.cantidad), 0)
+        FROM cuerpomov d
+        WHERE d.tm        = 'OPR'
+          AND d.documento = :doc
+    ", [':doc' => $documento])->fetchColumn();
+
+    // EPP acumulado para este proceso
+    $epp_total = (int) $this->db->query("
+        SELECT COALESCE(SUM(d.cantidad), 0)
+        FROM cuerpomov d
+        INNER JOIN cabezamov h
+            ON  d.tm        = h.tm
+            AND d.prefijo   = h.prefijo
+            AND d.documento = h.documento
+        WHERE h.tm         = 'EPP'
+          AND h.tmaux      = 'OPR'
+          AND h.docaux     = :doc
+          AND h.proceso_id = :pid
+    ", [':doc' => $documento, ':pid' => $proceso_id])->fetchColumn();
+
+    // RPP acumulado para este proceso
+    $rpp_total = (int) $this->db->query("
+        SELECT COALESCE(SUM(d.cantidad), 0)
+        FROM cuerpomov d
+        INNER JOIN cabezamov h
+            ON  d.tm        = h.tm
+            AND d.prefijo   = h.prefijo
+            AND d.documento = h.documento
+        WHERE h.tm         = 'RPP'
+          AND h.tmaux      = 'OPR'
+          AND h.docaux     = :doc
+          AND h.proceso_id = :pid
+    ", [':doc' => $documento, ':pid' => $proceso_id])->fetchColumn();
+
+    // -------------------------------------------------------
+    // 5. RENDER
+    // -------------------------------------------------------
+    return renderView(
+        $response,
+        __DIR__ . '/../Views/orden-produccion/procesos.php',
+        "Gestión de Proceso — OPR {$documento}",
+        [
+            'documento'   => $documento,
+            'proceso'     => $procesoData['nombre'],  // nombre legible para el título
+            'proceso_id'  => $proceso_id,
+            'existenEpp'  => $existenEpp,
+            'movimientos' => $movimientos,
+            'meta'        => $meta,
+            'epp_total'   => $epp_total,
+            'rpp_total'   => $rpp_total,
+        ]
+    );
+
+}   
 }

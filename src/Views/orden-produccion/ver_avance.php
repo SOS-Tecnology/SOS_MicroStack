@@ -108,21 +108,21 @@
                             </td>
 
                             <td class="px-4 py-2">
-
                                 <div class="flex gap-2">
-
-                                    <a href="/orden-produccion/procesos/<?= $opr['documento'] ?>/<?= $p['id_proceso'] ?>"
+<!-- 
+                                    {{-- Va directo al formulario crear EPP --}} -->
+                                    <a href="/epp/create/<?= $opr['documento'] ?>/<?= $p['id_proceso'] ?>"
                                         class="text-blue-600 hover:underline text-sm">
                                         📤 EPP
                                     </a>
 
+                                    <!-- {{-- Va a la pantalla de gestión del proceso (lista EPP+RPP) --}} -->
                                     <a href="/orden-produccion/procesos/<?= $opr['documento'] ?>/<?= $p['id_proceso'] ?>"
                                         class="text-green-600 hover:underline text-sm">
-                                        📥 RPP
+                                        📥 Ver proceso
                                     </a>
 
                                 </div>
-
                             </td>
 
                         </tr>

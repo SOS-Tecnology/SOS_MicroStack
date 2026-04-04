@@ -1,9 +1,5 @@
 <div class="p-6">
 
-    {{-- ============================================================ --}}
-    {{-- CABECERA: título + botón volver + acciones                   --}}
-    {{-- Misma estructura que ver_avance.php                          --}}
-    {{-- ============================================================ --}}
     <div class="flex justify-between items-center mb-6">
 
         <a href="/orden-produccion/avance/ver/<?= $documento ?>"
@@ -35,11 +31,11 @@
         </div>
 
     </div>
-
+<!-- 
     {{-- ============================================================ --}}
     {{-- TARJETAS RESUMEN: Meta / EPP / RPP / Avance                  --}}
     {{-- Misma tipología de cards que ver_avance.php                  --}}
-    {{-- ============================================================ --}}
+    {{-- ============================================================ --}} -->
     <?php
         $porcentaje_global = ($meta > 0) ? round(($rpp_total / $meta) * 100) : 0;
         $porcentaje_global = min($porcentaje_global, 100); // nunca superar 100%
@@ -82,9 +78,7 @@
 
     </div>
 
-    {{-- ============================================================ --}}
-    {{-- TABLA DE MOVIMIENTOS                                         --}}
-    {{-- ============================================================ --}}
+
     <div class="bg-white shadow rounded-xl overflow-hidden">
 
         <div class="bg-gray-100 px-4 py-2 font-semibold text-sm text-gray-600">

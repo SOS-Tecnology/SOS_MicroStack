@@ -730,7 +730,7 @@ class OrdenProdController
             $procesos = $this->db->select("ficha_tecnica_procesos (ftp)", [
                 "[>]procesos_ft (p)" => ["codigo_proceso" => "id"]
             ], [
-                "ftp.id(id_proceso)", // 👈 CLAVE
+                "p.id(id_proceso)", // 👈 CLAVE
                 "ftp.orden",
                 "ftp.nombre_proceso",
                 "ftp.ejecutable_en",
@@ -777,18 +777,18 @@ class OrdenProdController
 
 
                 $sql = "
-    SELECT SUM(d.cantidad) as total
-    FROM cuerpomov d
-    INNER JOIN cabezamov h 
-        ON d.tm = h.tm 
-        AND d.prefijo = h.prefijo 
-        AND d.documento = h.documento
-    WHERE 
-        h.tm = 'EPP'
-        AND h.tmaux = 'OPR'
-        AND h.docaux = :documento
-        AND h.proceso_id = :proceso
-";
+                    SELECT SUM(d.cantidad) as total
+                    FROM cuerpomov d
+                    INNER JOIN cabezamov h 
+                        ON d.tm = h.tm 
+                        AND d.prefijo = h.prefijo 
+                        AND d.documento = h.documento
+                    WHERE 
+                        h.tm = 'EPP'
+                        AND h.tmaux = 'OPR'
+                        AND h.docaux = :documento
+                        AND h.proceso_id = :proceso
+                ";
 
                 $epp = $this->db->query($sql, [
                     ':documento' => $documento,
@@ -800,18 +800,18 @@ class OrdenProdController
                 // ===============================
 
                 $sql = "
-    SELECT SUM(d.cantidad) as total
-    FROM cuerpomov d
-    INNER JOIN cabezamov h 
-        ON d.tm = h.tm 
-        AND d.prefijo = h.prefijo 
-        AND d.documento = h.documento
-    WHERE 
-        h.tm = 'RPP'
-        AND h.tmaux = 'OPR'
-        AND h.docaux = :documento
-        AND h.proceso_id = :proceso
-";
+                    SELECT SUM(d.cantidad) as total
+                    FROM cuerpomov d
+                    INNER JOIN cabezamov h 
+                        ON d.tm = h.tm 
+                        AND d.prefijo = h.prefijo 
+                        AND d.documento = h.documento
+                    WHERE 
+                        h.tm = 'RPP'
+                        AND h.tmaux = 'OPR'
+                        AND h.docaux = :documento
+                        AND h.proceso_id = :proceso
+                ";
 
                 $rpp = $this->db->query($sql, [
                     ':documento' => $documento,
@@ -857,12 +857,26 @@ public function procesos(Request $request, Response $response, array $args): Res
 {
     $documento  = $args['documento'];           // número OPR ej: 00000005
     $proceso_id = (int) $args['proceso'];       // ID numérico del proceso ej: 110
+// DEBUG TEMPORAL — borrar después
+    $procesoData = $this->db->get("procesos_ft", ["id", "nombre"], [
+        "id" => $proceso_id
+    ]);
+
+// die(json_encode([
+//     'proceso_id_buscado' => $proceso_id,
+//     'epp_en_bd' => $this->db->query("
+//         SELECT documento, proceso_id 
+//         FROM cabezamov 
+//         WHERE tm = 'EPP' AND docaux = :doc
+//         LIMIT 5
+//     ", [':doc' => $documento])->fetchAll(\PDO::FETCH_ASSOC)
+// ]));
 
     // -------------------------------------------------------
     // 1. DATOS DEL PROCESO (nombre para mostrar en el título)
     // -------------------------------------------------------
-    $procesoData = $this->db->get("procesos_ft", ["id", "nombre"], [
-        "id" => $proceso_id
+    $procesoData = $this->db->get("ficha_tecnica_procesos", ["id", "nombre_proceso AS nombre"], [
+    "id" => $proceso_id   
     ]);
 
     // Si el proceso no existe redirigimos con error limpio
@@ -947,6 +961,7 @@ public function procesos(Request $request, Response $response, array $args): Res
     // -------------------------------------------------------
     // 5. RENDER
     // -------------------------------------------------------
+
     return renderView(
         $response,
         __DIR__ . '/../Views/orden-produccion/procesos.php',

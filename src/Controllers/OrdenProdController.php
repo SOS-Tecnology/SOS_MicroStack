@@ -875,7 +875,7 @@ public function procesos(Request $request, Response $response, array $args): Res
     // -------------------------------------------------------
     // 1. DATOS DEL PROCESO (nombre para mostrar en el título)
     // -------------------------------------------------------
-    $procesoData = $this->db->get("ficha_tecnica_procesos", ["id", "nombre_proceso AS nombre"], [
+    $procesoData = $this->db->get("ficha_tecnica_procesos", ["id", "nombre_proceso"], [
     "id" => $proceso_id   
     ]);
 
@@ -968,7 +968,7 @@ public function procesos(Request $request, Response $response, array $args): Res
         "Gestión de Proceso — OPR {$documento}",
         [
             'documento'   => $documento,
-            'proceso'     => $procesoData['nombre'],  // nombre legible para el título
+            'proceso'     => $procesoData['nombre_proceso'],  // nombre legible para el título
             'proceso_id'  => $proceso_id,
             'existenEpp'  => $existenEpp,
             'movimientos' => $movimientos,

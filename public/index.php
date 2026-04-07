@@ -35,15 +35,16 @@ $dotenv = Dotenv::createImmutable(__DIR__ . "/..");
 $dotenv->load();
 
 // 2. Conexión Global a la Base de Datos
+
 $GLOBALS['db'] = new Medoo([
     'database_type' => $_ENV['DB_TYPE'],
     'database_name' => $_ENV['DB_NAME'],
-    'server'         => $_ENV['DB_HOST'],
-    'username'       => $_ENV['DB_USER'],
-    'password'       => $_ENV['DB_PASS'],
-    'charset'        => $_ENV['DB_CHARSET']
+    'server'        => $_ENV['DB_HOST'],
+    'username'      => $_ENV['DB_USER'],
+    'password'      => $_ENV['DB_PASS'],
+    'charset'       => 'utf8mb4',    // ← asegurar que es utf8mb4, no utf8
+    'collation'     => 'utf8mb4_unicode_ci',  // ← agregar esta línea
 ]);
-
 $app = AppFactory::create();
 $app->addErrorMiddleware(true, true, true);
 

@@ -225,6 +225,8 @@ class OrdenProdController
             'h.fecha',
             'h.fechent',
             'h.estado',
+            'h.docaux',
+            'h.tmaux',
             'c.nombrecli(nombrecli)'
         ], [
             'h.tm' => 'OPR',
@@ -253,6 +255,7 @@ class OrdenProdController
         ], [
             "cabezamov.documento",
             "cabezamov.prefijo",
+            "cabezamov.codcp",
             "cabezamov.fecha",
             "cabezamov.fechent",
             "cabezamov.estado",
@@ -318,7 +321,8 @@ class OrdenProdController
 
             // Buscar la ficha técnica real
             $ft = $this->db->get("fichas_tecnicas", "id", [
-                "id_producto_base" => $id_producto_base
+                "id_producto_base" => $id_producto_base,
+                "id_cliente" => $opr['codcp']
             ]);
 
             if (!$ft) continue;
@@ -667,6 +671,7 @@ class OrdenProdController
         ], [
             "h.documento",
             "h.prefijo",
+            "h.codcp",
             "h.fecha",
             "h.fechent",
             "h.estado",
@@ -706,7 +711,8 @@ class OrdenProdController
             $id_producto_base = $it['id_producto_base'];
 
             $ft = $this->db->get("fichas_tecnicas", "id", [
-                "id_producto_base" => $id_producto_base
+                "id_producto_base" => $id_producto_base,
+                "id_cliente" => $opr['codcp']
             ]);
 
             if (!$ft) continue;
@@ -843,140 +849,265 @@ class OrdenProdController
             ]
         );
     }
+    public function generarPdf(Request $request, Response $response, array $args): Response
+    {
+        $documento = $args['documento'];
+        $prefijo   = "OPR";
 
- // ==============================================================
-// REEMPLAZAR el método procesos() completo en OrdenProdController
-// Cambios respecto a la versión anterior:
-//   1. Busca proceso por ID (no por nombre) — evita el bug de null
-//   2. Calcula meta, epp_total, rpp_total para las tarjetas resumen
-//   3. Envía 'proceso' como nombre (para el título de la pantalla)
-//   4. Firma con tipado completo (consistente con index/avance/verAvance)
-// ==============================================================
+        $opr = $this->db->get("cabezamov", [
+            "[>]geclientes" => ["codcp" => "codcli"]
+        ], [
+            "cabezamov.documento",
+            "cabezamov.prefijo",
+            "cabezamov.fecha",
+            "cabezamov.codcp",
+            "cabezamov.fechent",
+            "cabezamov.estado",
+            "cabezamov.comen",
+            "cabezamov.docaux",
+            "geclientes.nombrecli(cliente)"
+        ], [
+            "cabezamov.tm"        => "OPR",
+            "cabezamov.documento" => $documento
+        ]);
 
-public function procesos(Request $request, Response $response, array $args): Response
-{
-    $documento  = $args['documento'];           // número OPR ej: 00000005
-    $proceso_id = (int) $args['proceso'];       // ID numérico del proceso ej: 110
-// DEBUG TEMPORAL — borrar después
-    $procesoData = $this->db->get("procesos_ft", ["id", "nombre"], [
-        "id" => $proceso_id
-    ]);
+        if (!$opr) {
+            die("OPR no encontrada");
+        }
 
-// die(json_encode([
-//     'proceso_id_buscado' => $proceso_id,
-//     'epp_en_bd' => $this->db->query("
-//         SELECT documento, proceso_id 
-//         FROM cabezamov 
-//         WHERE tm = 'EPP' AND docaux = :doc
-//         LIMIT 5
-//     ", [':doc' => $documento])->fetchAll(\PDO::FETCH_ASSOC)
-// ]));
+        $items = $this->db->select("cuerpomov", [
+            "[>]inrefinv" => ["codr" => "codr"]
+        ], [
+            "cuerpomov.item",
+            "cuerpomov.codr",
+            "inrefinv.descr(producto_nombre)",
+            "cuerpomov.codtalla",
+            "cuerpomov.codcolor",
+            "cuerpomov.cantidad"
+        ], [
+            "cuerpomov.tm"        => "OPR",
+            "cuerpomov.documento" => $documento
+        ]);
 
-    // -------------------------------------------------------
-    // 1. DATOS DEL PROCESO (nombre para mostrar en el título)
-    // -------------------------------------------------------
-    $procesoData = $this->db->get("ficha_tecnica_procesos", ["id", "nombre_proceso"], [
-    "id" => $proceso_id   
-    ]);
+        // Procesos desde FT
+        $procesos = [];
+        $fts_vistos = [];
 
-    // Si el proceso no existe redirigimos con error limpio
-    if (!$procesoData) {
-        return $response
-            ->withHeader('Location', "/orden-produccion/avance/ver/{$documento}")
-            ->withStatus(302);
+        foreach ($items as $it) {
+            $ft = $this->db->get("fichas_tecnicas", "id", [
+                "id_producto_base" => $this->db->get("inrefinv", "ref_fabrica", ["codr" => $it['codr']]),
+                "id_cliente" => $opr['codcp']
+            ]);
+            if (!$ft || in_array($ft, $fts_vistos)) continue;
+            $fts_vistos[] = $ft;
+
+            $procs = $this->db->select("ficha_tecnica_procesos (ftp)", [
+                "[>]procesos_ft (p)" => ["codigo_proceso" => "id"]
+            ], [
+                "ftp.id",
+                "ftp.orden",
+                "ftp.nombre_proceso",
+                "ftp.ejecutable_en",
+                "ftp.tiempo_minutos",
+                "p.entrada_tipo",
+                "p.salida_tipo"
+            ], [
+                "ftp.id_ficha_tecnica" => $ft,
+                "ftp.activo"           => 1,
+                "ORDER" => ["ftp.orden" => "ASC"]
+            ]);
+
+            foreach ($procs as $p) $procesos[] = $p;
+        }
+
+        $total_piezas = array_sum(array_column($items, 'cantidad'));
+
+        // Fotos de todas las FTs de esta OPR
+        $fotos = [];
+        foreach ($fts_vistos as $ft_id) {
+            $imgs = $this->db->select("ficha_tecnica_fotos", [
+                "ruta_imagen",
+                "descripcion"
+            ], [
+                "id_ficha_tecnica" => $ft_id
+            ]);
+            foreach ($imgs as $img) $fotos[] = $img;
+        }
+        ob_start();
+        require __DIR__ . '/../Views/orden-produccion/pdf_opr.php';
+        $html = ob_get_clean();
+
+        $response->getBody()->write($html);
+        return $response->withHeader('Content-Type', 'text/html; charset=UTF-8');
     }
+    // ==============================================================
+    // REEMPLAZAR el método procesos() completo en OrdenProdController
+    // Cambios respecto a la versión anterior:
+    //   1. Busca proceso por ID (no por nombre) — evita el bug de null
+    //   2. Calcula meta, epp_total, rpp_total para las tarjetas resumen
+    //   3. Envía 'proceso' como nombre (para el título de la pantalla)
+    //   4. Firma con tipado completo (consistente con index/avance/verAvance)
+    // ==============================================================
 
-    // -------------------------------------------------------
-    // 2. ¿YA EXISTEN EPP para este OPR + proceso?
-    //    Controla si el botón RPP se habilita en la vista
-    // -------------------------------------------------------
-    $existenEpp = $this->db->has("cabezamov", [
-        "tm"         => "EPP",
-        "tmaux"      => "OPR",
-        "docaux"     => $documento,
-        "proceso_id" => $proceso_id
-    ]);
+    public function procesos(Request $request, Response $response, array $args): Response
+    {
+        $documento  = $args['documento'];
+        $proceso_id = (int) $args['proceso'];
 
-    // -------------------------------------------------------
-    // 3. LISTADO DE MOVIMIENTOS EPP + RPP
-    // -------------------------------------------------------
-    $movimientos = $this->db->select("cabezamov (h)", [
-        "[>]provee (p)" => ["codcp" => "codp"]
-    ], [
-        "h.tm",
-        "h.documento",
-        "h.fecha",
-        "h.estado",
-        "h.proceso_id",
-        "p.nombre(proveedor)"
-    ], [
-        "h.tm"         => ["EPP", "RPP"],
-        "h.tmaux"      => "OPR",
-        "h.docaux"     => $documento,
-        "h.proceso_id" => $proceso_id,
-        "ORDER"        => ["h.documento" => "DESC"]
-    ]);
+        // -------------------------------------------------------
+        // 1. DATOS DEL PROCESO desde procesos_ft
+        //    proceso_id = procesos_ft.id (confirmado)
+        // -------------------------------------------------------
+        $procesoData = $this->db->get("procesos_ft", [
+            "id",
+            "nombre",
+            "entrada_tipo",
+            "salida_tipo"
+        ], [
+            "id" => $proceso_id
+        ]);
 
-    // -------------------------------------------------------
-    // 4. MÉTRICAS RESUMEN (meta / epp acumulado / rpp acumulado)
-    //    Se usan en las 4 tarjetas de la vista
-    // -------------------------------------------------------
+        if (!$procesoData) {
+            return $response
+                ->withHeader('Location', "/orden-produccion/avance/ver/{$documento}")
+                ->withStatus(302);
+        }
 
-    // META: total de prendas en la OPR
-    $meta = (int) $this->db->query("
-        SELECT COALESCE(SUM(d.cantidad), 0)
-        FROM cuerpomov d
-        WHERE d.tm        = 'OPR'
-          AND d.documento = :doc
-    ", [':doc' => $documento])->fetchColumn();
+        // -------------------------------------------------------
+        // 2. COMENTARIO ESPECÍFICO DE LA FT PARA ESTE PROCESO
+        // -------------------------------------------------------
+        $opr_codcp = $this->db->get("cabezamov", "codcp", [
+            "tm"        => "OPR",
+            "documento" => $documento
+        ]);
 
-    // EPP acumulado para este proceso
-    $epp_total = (int) $this->db->query("
-        SELECT COALESCE(SUM(d.cantidad), 0)
-        FROM cuerpomov d
-        INNER JOIN cabezamov h
+        $primer_item = $this->db->get("cuerpomov (cm)", [
+            "[>]inrefinv (r)" => ["codr" => "codr"]
+        ], [
+            "r.ref_fabrica"
+        ], [
+            "cm.tm"        => "OPR",
+            "cm.documento" => $documento
+        ]);
+
+        $comentario_proceso = null;
+        if ($primer_item && $opr_codcp) {
+            $ft_id = $this->db->get("fichas_tecnicas", "id", [
+                "id_producto_base" => $primer_item['ref_fabrica'],
+                "id_cliente"       => $opr_codcp
+            ]);
+            if ($ft_id) {
+                $ftp = $this->db->get("ficha_tecnica_procesos", ["comentario"], [
+                    "id_ficha_tecnica" => $ft_id,
+                    "codigo_proceso"   => $proceso_id
+                ]);
+                $comentario_proceso = $ftp['comentario'] ?? null;
+            }
+        }
+
+        // -------------------------------------------------------
+        // 3. ¿YA EXISTEN EPP para este OPR + proceso?
+        // -------------------------------------------------------
+        $existenEpp = $this->db->has("cabezamov", [
+            "tm"         => "EPP",
+            "tmaux"      => "OPR",
+            "docaux"     => $documento,
+            "proceso_id" => $proceso_id
+        ]);
+
+        // -------------------------------------------------------
+        // 4. LISTADO DE MOVIMIENTOS EPP + RPP
+        // -------------------------------------------------------
+        $movimientos = $this->db->query("
+        SELECT
+            h.tm,
+            h.documento,
+            h.fecha,
+            h.estado,
+            h.proceso_id,
+            p.nombre AS proveedor,
+            COALESCE(SUM(CASE WHEN d.tipo_registro = 'META' THEN d.cantidad ELSE 0 END), 0) AS cantidad
+        FROM cabezamov h
+        LEFT JOIN provee p
+            ON h.codcp = p.codp
+        LEFT JOIN cuerpomov d
             ON  d.tm        = h.tm
             AND d.prefijo   = h.prefijo
             AND d.documento = h.documento
-        WHERE h.tm         = 'EPP'
-          AND h.tmaux      = 'OPR'
-          AND h.docaux     = :doc
-          AND h.proceso_id = :pid
-    ", [':doc' => $documento, ':pid' => $proceso_id])->fetchColumn();
+            AND d.tipo_registro = 'META'
+        WHERE
+            h.tm         IN ('EPP','RPP')
+            AND h.tmaux  = 'OPR'
+            AND h.docaux = :documento
+            AND h.proceso_id = :proceso_id
+        GROUP BY
+            h.tm, h.documento, h.fecha, h.estado, h.proceso_id, p.nombre
+        ORDER BY h.documento DESC
+        ", [
+                ':documento'  => $documento,
+                ':proceso_id' => $proceso_id
+            ])->fetchAll(\PDO::FETCH_ASSOC);
 
-    // RPP acumulado para este proceso
-    $rpp_total = (int) $this->db->query("
-        SELECT COALESCE(SUM(d.cantidad), 0)
-        FROM cuerpomov d
-        INNER JOIN cabezamov h
-            ON  d.tm        = h.tm
-            AND d.prefijo   = h.prefijo
-            AND d.documento = h.documento
-        WHERE h.tm         = 'RPP'
-          AND h.tmaux      = 'OPR'
-          AND h.docaux     = :doc
-          AND h.proceso_id = :pid
-    ", [':doc' => $documento, ':pid' => $proceso_id])->fetchColumn();
+            // -------------------------------------------------------
+            // 5. MÉTRICAS RESUMEN
+            // -------------------------------------------------------
 
-    // -------------------------------------------------------
-    // 5. RENDER
-    // -------------------------------------------------------
+            // META: total de prendas en la OPR
+            $meta = (int) $this->db->query("
+            SELECT COALESCE(SUM(d.cantidad), 0)
+            FROM cuerpomov d
+            WHERE d.tm        = 'OPR'
+            AND d.documento = :doc
+        ", [':doc' => $documento])->fetchColumn();
 
-    return renderView(
-        $response,
-        __DIR__ . '/../Views/orden-produccion/procesos.php',
-        "Gestión de Proceso — OPR {$documento}",
-        [
-            'documento'   => $documento,
-            'proceso'     => $procesoData['nombre_proceso'],  // nombre legible para el título
-            'proceso_id'  => $proceso_id,
-            'existenEpp'  => $existenEpp,
-            'movimientos' => $movimientos,
-            'meta'        => $meta,
-            'epp_total'   => $epp_total,
-            'rpp_total'   => $rpp_total,
-        ]
-    );
+            // EPP acumulado META para este proceso
+            $epp_total = (int) $this->db->query("
+            SELECT COALESCE(SUM(d.cantidad), 0)
+            FROM cuerpomov d
+            INNER JOIN cabezamov h
+                ON  d.tm        = h.tm
+                AND d.prefijo   = h.prefijo
+                AND d.documento = h.documento
+            WHERE h.tm         = 'EPP'
+            AND h.tmaux      = 'OPR'
+            AND h.docaux     = :doc
+            AND h.proceso_id = :pid
+            AND d.tipo_registro = 'META'
+        ", [':doc' => $documento, ':pid' => $proceso_id])->fetchColumn();
 
-}   
+            // RPP acumulado META para este proceso
+            // ↓ FIX: tmaux = 'EPP' porque RPP referencia al EPP, no a la OPR
+            $rpp_total = (int) $this->db->query("
+            SELECT COALESCE(SUM(d.cantidad), 0)
+            FROM cuerpomov d
+            INNER JOIN cabezamov h
+                ON  d.tm        = h.tm
+                AND d.prefijo   = h.prefijo
+                AND d.documento = h.documento
+            WHERE h.tm         = 'RPP'
+            AND h.tmaux      = 'EPP'
+            AND h.proceso_id = :pid
+            AND d.tipo_registro = 'META'
+        ", [':pid' => $proceso_id])->fetchColumn();
+
+        // -------------------------------------------------------
+        // 6. RENDER
+        // -------------------------------------------------------
+        return renderView(
+            $response,
+            __DIR__ . '/../Views/orden-produccion/procesos.php',
+            "Gestión de Proceso — OPR {$documento}",
+            [
+                'documento'          => $documento,
+                'proceso'            => $procesoData['nombre'],
+                'proceso_id'         => $proceso_id,
+                'comentario_proceso' => $comentario_proceso,
+                'existenEpp'         => $existenEpp,
+                'movimientos'        => $movimientos,
+                'meta'               => $meta,
+                'epp_total'          => $epp_total,
+                'rpp_total'          => $rpp_total,
+            ]
+        );
+    }
 }

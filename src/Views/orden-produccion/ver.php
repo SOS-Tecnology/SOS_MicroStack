@@ -17,6 +17,11 @@
         <span class="px-3 py-1 text-xs md:text-sm rounded bg-blue-600">
             <?= $opr['estado'] ?: 'EN PROCESO' ?>
         </span>
+        <a href="/orden-produccion/pdf/<?= $opr['documento'] ?>"
+            target="_blank"
+            class="px-3 py-1 text-xs md:text-sm rounded bg-gray-600 hover:bg-gray-500 text-white">
+            🖨 Generar PDF
+        </a>
     </div>
 
     <!-- DATOS -->
@@ -164,7 +169,7 @@
                             <td class="px-2 py-1"><?= $p['ejecutable_en'] ?></td>
                             <td class="px-2 py-1"><?= $p['tiempo_unit'] ?></td>
                             <td class="px-2 py-1"><?= $p['cantidad'] ?></td>
-                            <td class="px-2 py-1"><?= $p['tiempo_total'] ?></td>        
+                            <td class="px-2 py-1"><?= $p['tiempo_total'] ?></td>
                             <td class="px-2 py-1"><?= $p['comentario'] ?></td>
                         </tr>
                     <?php endforeach; ?>

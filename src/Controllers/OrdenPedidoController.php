@@ -276,8 +276,8 @@ public function update($request, $response, $args)
     return $response->withHeader('Location', '/orden-pedido')->withStatus(302);
 }
 
-
-public function generarPdf($request, $response, $args)
+// utiliza para el proceso composer require dompdf/dompdf
+public function generarPdf_v1($request, $response, $args)
 {
     $id = $args['id'];
 
@@ -333,5 +333,49 @@ public function generarPdf($request, $response, $args)
     return $response
         ->withHeader('Content-Type', 'application/pdf')
         ->withHeader('Content-Disposition', 'inline; filename="OP-' . $id . '.pdf"');
+}
+
+public function generarPdf($request, $response, $args)
+{
+    $id = $args['id'];
+
+    $pedido = $this->db->get("cabezamov", [
+        "[>]geclientes" => ["codcp" => "codcli"]
+    ], [
+        "cabezamov.documento",
+        "cabezamov.codcp",
+        "cabezamov.codsuc",
+        "cabezamov.fecha",
+        "cabezamov.fechent",
+        "cabezamov.comen",
+        "cabezamov.estado",
+        "cabezamov.valortotal",
+        "geclientes.nombrecli(cliente)"
+    ], [
+        "cabezamov.documento" => $id,
+        "cabezamov.tm" => "OP"
+    ]);
+
+    $detalles = $this->db->select("cuerpomov", [
+        "[>]inrefinv" => ["codr" => "codr"]
+    ], [
+        "cuerpomov.codr",
+        "inrefinv.descr(producto_nombre)",
+        "cuerpomov.codtalla",
+        "cuerpomov.codcolor",
+        "cuerpomov.cantidad",
+        "cuerpomov.valor",
+        "cuerpomov.comencpo"
+    ], [
+        "cuerpomov.documento" => $id,
+        "cuerpomov.tm" => "OP"
+    ]);
+
+    ob_start();
+    require __DIR__ . '/../../src/Views/ordenpedido/pdf_template.php';
+    $html = ob_get_clean();
+
+    $response->getBody()->write($html);
+    return $response->withHeader('Content-Type', 'text/html; charset=UTF-8');
 }
 }

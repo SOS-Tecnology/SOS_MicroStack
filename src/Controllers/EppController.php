@@ -103,20 +103,74 @@ class EppController
         // Parámetros desde Avance OPR
         $opr_param = $args['documento'] ?? null;
         $ft_param = $args['ft_id'] ?? null;
-        $proceso_param = isset($args['proceso']) ? urldecode($args['proceso']) : null;
+        $proceso_param = isset($args['proceso']) ? (int)$args['proceso'] : null;
 
+        // Resolver datos del proceso desde ficha_tecnica_procesos
+        $proceso_data = null;
+        if ($proceso_param) {
+            $proceso_data = $this->db->get("procesos_ft", [
+                "id",
+                "nombre",
+                "entrada_tipo",
+                "salida_tipo",
+                "requiere_satelite"
+            ], [
+                "id" => $proceso_param
+            ]);
+
+            // TRACE TEMPORAL — borrar después
+
+
+        }
+// Obtener comentario específico de la FT para este proceso
+$comentario_proceso = null;
+if ($proceso_param && $opr_param) {
+    // Obtener FT de la OPR
+    $opr_data = $this->db->get("cabezamov", ["codcp", "documento"], [
+        "tm"        => "OPR",
+        "documento" => $opr_param
+    ]);
+
+    if ($opr_data) {
+        // Primer item de la OPR para resolver la FT
+        $primer_item = $this->db->get("cuerpomov (cm)", [
+            "[>]inrefinv (r)" => ["codr" => "codr"]
+        ], [
+            "r.ref_fabrica"
+        ], [
+            "cm.tm"        => "OPR",
+            "cm.documento" => $opr_param
+        ]);
+
+        if ($primer_item) {
+            $ft_id = $this->db->get("fichas_tecnicas", "id", [
+                "id_producto_base" => $primer_item['ref_fabrica'],
+                "id_cliente"       => $opr_data['codcp']
+            ]);
+
+            if ($ft_id) {
+                $ftp = $this->db->get("ficha_tecnica_procesos", [
+                    "comentario"
+                ], [
+                    "id_ficha_tecnica" => $ft_id,
+                    "codigo_proceso"   => $proceso_param
+                ]);
+                $comentario_proceso = $ftp['comentario'] ?? null;
+            }
+        }
+    }
+}
         return renderView($response, __DIR__ . '/../Views/Epp/create.php', "Nuevo Envío a Proceso", [
-            'consecutivo' => $nuevoConsecutivo,
-            'satelites'   => $satelites,
-            'procesos'    => $procesos,
-            'personal'    => $personal,
-            'oprs'        => $oprs,
-            'nextEpp'     => $nextEpp,
-
-            // NUEVOS
-            'opr_param' => $opr_param,
-            'ft_param' => $ft_param,
-            'proceso_param' => $proceso_param
+            'consecutivo'  => $nuevoConsecutivo,
+            'satelites'    => $satelites,
+            'procesos'     => $procesos,
+            'personal'     => $personal,
+            'oprs'         => $oprs,
+            'nextEpp'      => $nextEpp,
+            'opr_param'    => $opr_param,
+            'comentario_proceso' => $comentario_proceso,
+            'proceso_param' => $proceso_param,   // ficha_tecnica_procesos.id (int)
+            'proceso_data'  => $proceso_data,    // datos completos del proceso
         ]);
     }
 
@@ -517,7 +571,10 @@ class EppController
 
         $meta = [];
         $materiales = [];
-
+        $codcp_opr = $this->db->get("cabezamov", "codcp", [
+            "tm"        => "OPR",
+            "documento" => $documento
+        ]);
         foreach ($items as $it) {
 
             // ======================
@@ -536,10 +593,12 @@ class EppController
             // BUSCAR FICHA TECNICA
             // ======================
 
-            $ft_id = $this->db->get("fichas_tecnicas", "id", [
-                "id_producto_base" => $it['id_producto_base']
-            ]);
 
+
+            $ft_id = $this->db->get("fichas_tecnicas", "id", [
+                "id_producto_base" => $it['id_producto_base'],
+                "id_cliente"       => $codcp_opr   // ← regla FT siempre por cliente
+            ]);
             if (!$ft_id) continue;
 
             // ======================

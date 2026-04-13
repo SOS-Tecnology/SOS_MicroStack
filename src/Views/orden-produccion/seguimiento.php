@@ -25,6 +25,7 @@
                     <th class="px-6 py-3">Fecha</th>
                     <th class="px-6 py-3">Cliente</th>
                     <th class="px-6 py-3">Fecha Entrega</th>
+                    <th class="px-6 py-3">OP-Docu</th>
                     <th class="px-6 py-3 text-center">Estado</th>
                     <th class="px-6 py-3 text-center">Acciones</th>
                 </tr>
@@ -50,7 +51,10 @@
                             <td class="px-6 py-4">
                                 <?= $opr['fechent'] ?>
                             </td>
-
+                            
+                            <td class="px-6 py-4">
+                                <?= $opr['docaux'] ?>
+                            </td>
                             <td class="px-6 py-4 text-center">
                                 <?php
                                 $estado = $opr['estadorm'] ?? 'P';

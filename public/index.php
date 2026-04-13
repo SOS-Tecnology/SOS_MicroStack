@@ -319,8 +319,10 @@ $app->group('', function ($app) {
     $app->post('/orden-pedido/update/{id}', function ($request, $response, $args) {
         $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
         return $controller->update($request, $response, $args);
-
-        $app->get('/orden-pedido/pdf/{id}', [\App\Controllers\OrdenPedidoController::class, 'generarPdf']);
+    });
+    $app->get('/orden-pedido/pdf/{id}', function ($request, $response, $args) {
+        $controller = new App\Controllers\OrdenPedidoController($GLOBALS['db']);
+        return $controller->generarPdf($request, $response, $args);
     });
     // ---------------------------------------------------------
     // RUTAS: SISTEMA / TEST
@@ -393,6 +395,10 @@ $app->group('', function ($app) {
     $app->get('/orden-produccion/avance/ver/{documento}', function ($request, $response, $args) {
         $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
         return $controller->verAvance($request, $response, $args);
+    });
+    $app->get('/orden-produccion/pdf/{documento}', function ($request, $response, $args) {
+        $controller = new App\Controllers\OrdenProdController($GLOBALS['db']);
+        return $controller->generarPdf($request, $response, $args);
     });
     // ===============================
     // GESTIÓN PROCESOS OPR (EPP / RPP)

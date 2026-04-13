@@ -10,6 +10,11 @@
         <h2 class="text-2xl font-semibold text-gray-700">
             OPR <?= $documento ?> &mdash; <?= htmlspecialchars($proceso) ?>
         </h2>
+        <?php if (!empty($comentario_proceso)): ?>
+            <p class="text-sm text-gray-500 mt-1">
+                📌 <?= htmlspecialchars($comentario_proceso) ?>
+            </p>
+        <?php endif; ?>
 
         <div class="flex gap-2">
 
@@ -31,14 +36,14 @@
         </div>
 
     </div>
-<!-- 
+    <!-- 
     {{-- ============================================================ --}}
     {{-- TARJETAS RESUMEN: Meta / EPP / RPP / Avance                  --}}
     {{-- Misma tipología de cards que ver_avance.php                  --}}
     {{-- ============================================================ --}} -->
     <?php
-        $porcentaje_global = ($meta > 0) ? round(($rpp_total / $meta) * 100) : 0;
-        $porcentaje_global = min($porcentaje_global, 100); // nunca superar 100%
+    $porcentaje_global = ($meta > 0) ? round(($rpp_total / $meta) * 100) : 0;
+    $porcentaje_global = min($porcentaje_global, 100); // nunca superar 100%
     ?>
 
     <div class="grid grid-cols-4 gap-4 mb-6">
@@ -71,7 +76,7 @@
             </p>
             <div class="w-full bg-gray-200 h-2 rounded mt-2">
                 <div class="bg-green-500 h-2 rounded"
-                     style="width: <?= $porcentaje_global ?>%">
+                    style="width: <?= $porcentaje_global ?>%">
                 </div>
             </div>
         </div>

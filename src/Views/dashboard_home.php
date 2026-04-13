@@ -27,6 +27,70 @@ $user = $_SESSION['user'];
                 Crear y gestionar fichas técnicas.
             </p>
         </a>
+        <!-- Procesos de Fabricación -->
+        <a href="/procesos-ft"
+            class="bg-gray-700 hover:bg-gray-800 text-white rounded-2xl shadow-lg p-6
+      flex flex-col items-center justify-center text-center
+      transition transform hover:-translate-y-1">
+
+            <svg xmlns="http://www.w3.org/2000/svg"
+                class="w-14 h-14 mb-4 text-white opacity-90"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.6"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+
+                <!-- dientes -->
+                <path d="M12 3.5
+             l1.2 0.3
+             0.8 1.6
+             1.6 0.7
+             1.7 -0.4
+             1.3 1.3
+             -0.4 1.7
+             0.7 1.6
+             1.6 0.8
+             0.3 1.2
+             -0.3 1.2
+             -1.6 0.8
+             -0.7 1.6
+             0.4 1.7
+             -1.3 1.3
+             -1.7 -0.4
+             -1.6 0.7
+             -0.8 1.6
+             -1.2 0.3
+             -1.2 -0.3
+             -0.8 -1.6
+             -1.6 -0.7
+             -1.7 0.4
+             -1.3 -1.3
+             0.4 -1.7
+             -0.7 -1.6
+             -1.6 -0.8
+             -0.3 -1.2
+             0.3 -1.2
+             1.6 -0.8
+             0.7 -1.6
+             -0.4 -1.7
+             1.3 -1.3
+             1.7 0.4
+             1.6 -0.7
+             0.8 -1.6
+             z" />
+
+                <!-- centro -->
+                <circle cx="12" cy="12" r="3.2" />
+            </svg>
+
+            <h3 class="text-lg font-semibold">Procesos de Fabricación</h3>
+
+            <p class="text-sm opacity-90 mt-1">
+                Configuración de procesos, bodegas y movimientos
+            </p>
+        </a>
 
         <!-- Clientes -->
         <a href="/clientes"
@@ -122,72 +186,7 @@ $user = $_SESSION['user'];
             </p>
         </a>
 
-        <!-- Procesos de Fabricación -->
-        <a href="/procesos-ft"
-            class="bg-gray-700 hover:bg-gray-800 text-white rounded-2xl shadow-lg p-6
-      flex flex-col items-center justify-center text-center
-      transition transform hover:-translate-y-1">
-
-            <svg xmlns="http://www.w3.org/2000/svg"
-                class="w-14 h-14 mb-4 text-white opacity-90"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="1.6"
-                stroke-linecap="round"
-                stroke-linejoin="round">
-
-                <!-- dientes -->
-                <path d="M12 3.5
-             l1.2 0.3
-             0.8 1.6
-             1.6 0.7
-             1.7 -0.4
-             1.3 1.3
-             -0.4 1.7
-             0.7 1.6
-             1.6 0.8
-             0.3 1.2
-             -0.3 1.2
-             -1.6 0.8
-             -0.7 1.6
-             0.4 1.7
-             -1.3 1.3
-             -1.7 -0.4
-             -1.6 0.7
-             -0.8 1.6
-             -1.2 0.3
-             -1.2 -0.3
-             -0.8 -1.6
-             -1.6 -0.7
-             -1.7 0.4
-             -1.3 -1.3
-             0.4 -1.7
-             -0.7 -1.6
-             -1.6 -0.8
-             -0.3 -1.2
-             0.3 -1.2
-             1.6 -0.8
-             0.7 -1.6
-             -0.4 -1.7
-             1.3 -1.3
-             1.7 0.4
-             1.6 -0.7
-             0.8 -1.6
-             z" />
-
-                <!-- centro -->
-                <circle cx="12" cy="12" r="3.2" />
-            </svg>
-
-            <h3 class="text-lg font-semibold">Procesos de Fabricación</h3>
-
-            <p class="text-sm opacity-90 mt-1">
-                Configuración de procesos, bodegas y movimientos
-            </p>
-        </a>
-
-       <!-- Procesos a OPRs -->
+        <!-- Procesos a OPRs -->
         <a href="orden-produccion/avance"
             class="bg-gray-500 hover:bg-gray-600 text-white rounded-2xl shadow-lg p-6
               flex flex-col items-center justify-center text-center

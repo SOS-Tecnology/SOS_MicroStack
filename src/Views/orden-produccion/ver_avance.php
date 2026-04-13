@@ -13,34 +13,44 @@
 
     </div>
 
-    <!-- CABECERA -->
-    <div class="bg-white shadow rounded-xl p-6 mb-6">
-        <div class="grid grid-cols-4 gap-6">
+<!-- CABECERA -->
+<div class="bg-gray-800 text-white shadow rounded-xl p-6 mb-6">
+    <div class="grid grid-cols-4 gap-6">
 
-            <div>
-                <p class="text-sm text-gray-500">Cliente</p>
-                <p class="font-semibold"><?= $opr['nombrecli'] ?></p>
-            </div>
-
-            <div>
-                <p class="text-sm text-gray-500">Fecha</p>
-                <p class="font-semibold"><?= $opr['fecha'] ?></p>
-            </div>
-
-            <div>
-                <p class="text-sm text-gray-500">Fecha Entrega</p>
-                <p class="font-semibold"><?= $opr['fechent'] ?></p>
-            </div>
-
-            <div>
-                <p class="text-sm text-gray-500">Total Prendas</p>
-                <p class="font-semibold text-blue-600">
-                    <?= number_format($total_prendas) ?>
-                </p>
-            </div>
-
+        <div>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">Cliente</p>
+            <p class="font-semibold text-lg"><?= htmlspecialchars($opr['nombrecli']) ?></p>
         </div>
+
+        <div>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">OPR</p>
+            <p class="font-semibold"><?= $opr['documento'] ?></p>
+        </div>
+
+        <div>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">Fecha</p>
+            <p class="font-semibold"><?= $opr['fecha'] ?></p>
+        </div>
+
+        <div>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">Entrega</p>
+            <p class="font-semibold"><?= $opr['fechent'] ?></p>
+        </div>
+
+        <div>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">Total prendas</p>
+            <p class="font-semibold text-blue-300 text-lg">
+                <?= number_format($total_prendas) ?>
+            </p>
+        </div>
+
+        <div>
+            <p class="text-xs text-gray-400 uppercase tracking-wide">Estado</p>
+            <p class="font-semibold"><?= $opr['estado'] ?: 'En proceso' ?></p>
+        </div>
+
     </div>
+</div>
 
     <!-- PROCESOS -->
     <?php foreach ($fts as $ft): ?>

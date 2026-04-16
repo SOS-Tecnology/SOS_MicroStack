@@ -4,7 +4,6 @@ namespace App\Controllers;
 
 class RppController
 {
-
     protected $db;
 
     public function __construct($db)
@@ -12,24 +11,21 @@ class RppController
         $this->db = $db;
     }
 
+    // =============================================================
+    // CREATE — Cargar formulario de nueva RPP a partir de una EPP
+    // =============================================================
     public function create($request, $response, $args)
     {
         $epp = $args['epp'];
 
-        // ===============================
-        // 1. CABECERA EPP + PROCESO + SATELITE
-        // ===============================
+        // -------------------------------------------------------
+        // 1. CABECERA EPP: proceso, satélite, OPR
+        // -------------------------------------------------------
         $cab = $this->db->get("cabezamov", [
-
             "[>]procesos_ft" => ["proceso_id" => "id"],
             "[>]satelites"   => ["satelite_id" => "id"],
             "[>]provee"      => ["satelites.id_proveedor" => "codp"]
-
         ], [
-
-            // ===============================
-            // CABEZAMOV
-            // ===============================
             "cabezamov.tm",
             "cabezamov.prefijo",
             "cabezamov.documento",
@@ -37,21 +33,13 @@ class RppController
             "cabezamov.estado",
             "cabezamov.proceso_id",
             "cabezamov.codcp",
-            "cabezamov.docaux",
+            "cabezamov.docaux",       // número OPR
             "cabezamov.prefaux",
             "cabezamov.tmaux",
             "cabezamov.satelite_id",
-
-            // ===============================
-            // PROCESO
-            // ===============================
+            "cabezamov.opr_id",
             "procesos_ft.nombre(proceso_nombre)",
-
-            // ===============================
-            // SATELITE / PROVEEDOR 🔥
-            // ===============================
             "provee.nombre(satelite_nombre)"
-
         ], [
             "cabezamov.tm"        => "EPP",
             "cabezamov.prefijo"   => "EPP",
@@ -59,201 +47,187 @@ class RppController
         ]);
 
         if (!$cab) {
-            $_SESSION['error'] = "EPP no encontrado";
+            $_SESSION['error'] = "EPP no encontrada: $epp";
             return $response->withHeader('Location', '/orden-produccion')->withStatus(302);
         }
 
-        // ===============================
-        // 2. DETALLE EPP
-        // ===============================
-        $det = $this->db->select("cuerpomov", "*", [
-            "tm"        => "EPP",
-            "prefijo"   => "EPP",
-            "documento" => $epp
-        ]);
+        // -------------------------------------------------------
+        // 2. CLIENTE — leer de la OPR referenciada en la EPP
+        // -------------------------------------------------------
+        $cliente = '';
+        if (!empty($cab['docaux'])) {
+            $opr_cab = $this->db->get("cabezamov", [
+                "[>]geclientes" => ["codcp" => "codcli"]
+            ], [
+                "geclientes.nombrecli(cliente)"
+            ], [
+                "cabezamov.tm"        => "OPR",
+                "cabezamov.documento" => $cab['docaux']
+            ]);
+            $cliente = $opr_cab['cliente'] ?? '';
+        }
 
-        $items = $this->db->select('cuerpomov (cm)', [
-            '[>]inrefinv (r)' => ['codr' => 'codr']
+        // -------------------------------------------------------
+        // 3. DETALLE EPP
+        //    cantent = acumulador de recibos anteriores (todas las RPPs previas)
+        //    pendiente = cantidad - cantent
+        //    Solo se muestran líneas con pendiente > 0
+        // -------------------------------------------------------
+        $items = $this->db->select("cuerpomov (cm)", [
+            "[>]inrefinv (r)" => ["cm.codr" => "codr"]
         ], [
-            'cm.codr(coditem)',
-            'cm.codcolor(color)',
-            'cm.codtalla(talla)',
-            'cm.cantidad',
-            'cm.valor',
-            'r.descr(descripcion)'
+            "cm.ID",
+            "cm.codr(coditem)",
+            "cm.codcolor(color)",
+            "cm.codtalla(talla)",
+            "cm.cantidad",
+            "cm.cantent",
+            "cm.tipo_registro",
+            "r.descr(descripcion)"
         ], [
             "cm.tm"        => "EPP",
             "cm.prefijo"   => "EPP",
             "cm.documento" => $epp
         ]);
-        // ===============================
-        // 3. TRAER RECIBIDO EN RPP 🔥
-        // ===============================
-        $rppRecibido = $this->db->select("cuerpomov", [
-            "codr",
-            "codtalla",
-            "codcolor",
-            "cantidad"
-        ], [
-            "tm" => "RPP",
-            "prefijo" => "RPP",
-            "docaux" => $epp
-        ]);
 
-        // Agrupar recibido
-        $mapRecibido = [];
-
-        foreach ($rppRecibido as $r) {
-
-            $key = $r['codr'] . '|' . ($r['codtalla'] ?? '') . '|' . ($r['codcolor'] ?? '');
-
-            if (!isset($mapRecibido[$key])) {
-                $mapRecibido[$key] = 0;
-            }
-
-            $mapRecibido[$key] += $r['cantidad'];
-        }
-
-        // ===============================
-        // 3. SEPARAR MP vs METIS 🔥
-        // (AJUSTA EL CAMPO SEGÚN TU BD)
-        // ===============================
-        $mp = [];
-        $metis = [];
+        $mp    = [];  // Materia Prima — en la RPP es retorno de sobrante
+        $metis = [];  // META — producción terminada que devuelve el satélite
 
         foreach ($items as $d) {
+            $recibido  = floatval($d['cantent'] ?? 0);
+            $pendiente = floatval($d['cantidad']) - $recibido;
 
-            $key = $d['coditem'] . '|' . ($d['talla'] ?? '') . '|' . ($d['color'] ?? '');
-
-            $recibido = $mapRecibido[$key] ?? 0;
-            $pendiente = $d['cantidad'] - $recibido;
-
-            // 🔥 SOLO MOSTRAR SI HAY PENDIENTE
             if ($pendiente <= 0) continue;
 
-            $d['recibido'] = $recibido;
+            $d['recibido']  = $recibido;
             $d['pendiente'] = $pendiente;
 
-            if (empty($d['talla'])) {
+            if ($d['tipo_registro'] === 'MP') {
                 $mp[] = $d;
             } else {
+                // META y SOBRANTE van a la tabla de producción
                 $metis[] = $d;
             }
         }
-        // ===============================
-        // 4. FORMATO OPR
-        // ===============================
-        $oprFormateado = str_pad($cab['docaux'], 6, "0", STR_PAD_LEFT);
 
-        // ===============================
-        // 5. CONSECUTIVO RPP
-        // ===============================
-        $last = $this->db->max("cabezamov", "documento", [
-            "tm" => "RPP",
+        // -------------------------------------------------------
+        // 4. CONSECUTIVO RPP
+        // -------------------------------------------------------
+        $last    = $this->db->max("cabezamov", "documento", [
+            "tm"      => "RPP",
             "prefijo" => "RPP"
         ]);
-
-        $numero = $last ? intval(substr($last, 3)) + 1 : 1;
+        $numero  = $last ? intval($last) + 1 : 1;
         $nextRpp = str_pad($numero, 8, "0", STR_PAD_LEFT);
 
-        // ===============================
-        // 6. ENVIAR A VISTA
-        // ===============================
+        // -------------------------------------------------------
+        // 5. OPR formateado para mostrar
+        // -------------------------------------------------------
+        $oprFormateado = str_pad($cab['docaux'] ?? '', 8, "0", STR_PAD_LEFT);
+
         return renderView(
             $response,
             __DIR__ . '/../Views/rpp/create.php',
             "Recepción Proceso (RPP)",
             [
-                'cab' => $cab,
-                'mp'  => $mp,
-                'metis' => $metis,
+                'cab'     => $cab,
+                'mp'      => $mp,
+                'metis'   => $metis,
                 'nextRpp' => $nextRpp,
-                'opr' => $oprFormateado
+                'opr'     => $oprFormateado,
+                'cliente' => $cliente
             ]
         );
     }
 
+    // =============================================================
+    // STORE — Guardar la RPP
+    // =============================================================
     public function store($request, $response)
     {
-        $data = $request->getParsedBody();
-
+        $data      = $request->getParsedBody();
         $documento = str_pad($data['documento'], 8, "0", STR_PAD_LEFT);
+        $epp       = $data['epp'];
 
-        // CABECERA
+        if (empty($data['fecha'])) {
+            $_SESSION['error'] = "Debe ingresar la fecha de recibo";
+            return $response
+                ->withHeader('Location', '/rpp/create/' . $epp)
+                ->withStatus(302);
+        }
+
+        // -------------------------------------------------------
+        // 1. CABECERA RPP
+        // -------------------------------------------------------
         $this->db->insert("cabezamov", [
-
-            "tm"        => "RPP",
-            "prefijo"   => "RPP",
-            "documento" => $documento,
-
-            "fecha"     => $data['fecha'],
-
-            "codcp"     => $data['codcp'] ?? null,
-            "comen"     => $data['comen'] ?? '',
-
-            "docaux"    => $data['epp'],
-            "prefaux"   => "EPP",
-            "tmaux"     => "EPP",
-
-            "opr_id"     => $data['opr'] ?? null,
-            "proceso_id" => $data['proceso'] ?? null,
+            "tm"          => "RPP",
+            "prefijo"     => "RPP",
+            "documento"   => $documento,
+            "fecha"       => $data['fecha'],
+            "codcp"       => $data['codcp']    ?? null,
+            "comen"       => $data['comen']    ?? '',
+            "docaux"      => $epp,
+            "prefaux"     => "EPP",
+            "tmaux"       => "EPP",
+            "opr_id"      => $data['opr']      ?? null,
+            "proceso_id"  => $data['proceso']  ?? null,
             "satelite_id" => $data['satelite'] ?? null,
-
-            "fechacrea" => date('Y-m-d H:i:s'),
-            "usuacrea"  => $_SESSION['usuario'] ?? 'sistema'
-
+            "estado"      => "",
+            "fechacrea"   => date('Y-m-d H:i:s'),
+            "usuacrea"    => $_SESSION['usuario'] ?? 'sistema'
         ]);
 
-        // DETALLE
-        if (!empty($data['detalle'])) {
-
+        // -------------------------------------------------------
+        // 2. DETALLE RPP + acumular cantent en EPP
+        // -------------------------------------------------------
+        if (!empty($data['detalle']) && is_array($data['detalle'])) {
             foreach ($data['detalle'] as $d) {
+                $cantidad = floatval($d['cantidad'] ?? 0);
+                if ($cantidad <= 0) continue;
 
+                $codr     = $d['codr']         ?? null;
+                $codtalla = $d['codtalla']      ?? '';
+                $codcolor = $d['codcolor']      ?? '';
+                $tipo     = $d['tipo_registro'] ?? 'META';
+
+                // Insertar línea en RPP
                 $this->db->insert("cuerpomov", [
-
-                    "tm"        => "RPP",
-                    "prefijo"   => "RPP",
-                    "documento" => $documento,
-
-                    "codr"      => $d['codr'],
-                    "codtalla"  => $d['codtalla'] ?? null,
-                    "codcolor"  => $d['codcolor'] ?? null,
-
-                    "cantidad"  => $d['cantidad'],
-                    "cantent"   => $d['cantent'] ?? 0,
-
-                    "unidad"    => $d['unidad'] ?? null,
-                    "tipo_registro" => $d['tipo_registro'] ?? 'META',
-
-                    "docaux" => $data['epp'],
-                    "prefaux" => "EPP",
-                    "tmaux"  => "EPP"
-
+                    "tm"            => "RPP",
+                    "prefijo"       => "RPP",
+                    "documento"     => $documento,
+                    "codr"          => $codr,
+                    "codtalla"      => $codtalla,
+                    "codcolor"      => $codcolor,
+                    "cantidad"      => $cantidad,
+                    "cantent"       => 0,
+                    "tipo_registro" => $tipo,
+                    "docaux"        => $epp,
+                    "prefaux"       => "EPP",
+                    "tmaux"         => "EPP"
                 ]);
 
-                // ===============================
-                // ACTUALIZAR CANTENT EN EPP 🔥
-                // ===============================
+                // Acumular en cantent de la EPP
+                // cantent es el acumulador oficial de recibos parciales
                 $this->db->update("cuerpomov", [
-
-                    "cantent[+]" => $d['cantidad']
-
+                    "cantent[+]" => $cantidad
                 ], [
-
                     "tm"        => "EPP",
                     "prefijo"   => "EPP",
-                    "documento" => $data['epp'],
-
-                    "codr"      => $d['codr'],
-                    "codtalla"  => $d['codtalla'] ?? null,
-                    "codcolor"  => $d['codcolor'] ?? null
-
+                    "documento" => $epp,
+                    "codr"      => $codr,
+                    "codtalla"  => $codtalla,
+                    "codcolor"  => $codcolor
                 ]);
             }
         }
 
+        // -------------------------------------------------------
+        // 3. Volver al avance de la OPR
+        // -------------------------------------------------------
+        $opr = str_pad($data['opr'] ?? '', 8, "0", STR_PAD_LEFT);
+
         return $response
-            ->withHeader('Location', '/orden-produccion/avance')
+            ->withHeader('Location', '/orden-produccion/avance/ver/' . $opr)
             ->withStatus(302);
     }
 }

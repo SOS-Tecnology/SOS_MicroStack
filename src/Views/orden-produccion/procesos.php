@@ -110,16 +110,16 @@
 
                     <?php foreach ($movimientos as $m): ?>
 
-                        <tr class="hover:bg-gray-50">
+                        <tr class="hover:bg-gray-50 <?= ($m['tipo_fila'] === 'RPP') ? 'bg-green-50' : '' ?>">
 
-                            <td class="px-4 py-2">
-                                <?php if ($m['tm'] === 'EPP'): ?>
+                            <td class="px-4 py-2 <?= ($m['tipo_fila'] === 'RPP') ? 'pl-10' : '' ?>">
+                                <?php if ($m['tipo_fila'] === 'EPP'): ?>
                                     <span class="bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-1 rounded">
                                         EPP
                                     </span>
                                 <?php else: ?>
                                     <span class="bg-green-100 text-green-800 text-xs font-semibold px-2 py-1 rounded">
-                                        RPP
+                                        ↳ RPP
                                     </span>
                                 <?php endif; ?>
                             </td>

@@ -1019,33 +1019,67 @@ class OrdenProdController
         // 4. LISTADO DE MOVIMIENTOS EPP + RPP
         // -------------------------------------------------------
         $movimientos = $this->db->query("
+        -- EPPs vinculados a esta OPR + proceso
         SELECT
             h.tm,
+            h.tm        AS tipo_fila,
             h.documento,
+            h.documento AS epp_doc,
             h.fecha,
             h.estado,
             h.proceso_id,
             p.nombre AS proveedor,
             COALESCE(SUM(CASE WHEN d.tipo_registro = 'META' THEN d.cantidad ELSE 0 END), 0) AS cantidad
         FROM cabezamov h
-        LEFT JOIN provee p
-            ON h.codcp = p.codp
+        LEFT JOIN provee p ON h.codcp = p.codp
         LEFT JOIN cuerpomov d
             ON  d.tm        = h.tm
             AND d.prefijo   = h.prefijo
             AND d.documento = h.documento
             AND d.tipo_registro = 'META'
-        WHERE
-            h.tm         IN ('EPP','RPP')
-            AND h.tmaux  = 'OPR'
-            AND h.docaux = :documento
-            AND h.proceso_id = :proceso_id
-        GROUP BY
-            h.tm, h.documento, h.fecha, h.estado, h.proceso_id, p.nombre
-        ORDER BY h.documento DESC
+        WHERE h.tm       = 'EPP'
+          AND h.tmaux    = 'OPR'
+          AND h.docaux   = :documento
+          AND h.proceso_id = :proceso_id
+        GROUP BY h.tm, h.documento, h.fecha, h.estado, h.proceso_id, p.nombre
+
+        UNION ALL
+
+        -- RPPs cuyo docaux apunta a alguno de esos EPPs
+        SELECT
+            h.tm,
+            h.tm        AS tipo_fila,
+            h.documento,
+            h.docaux    AS epp_doc,
+            h.fecha,
+            h.estado,
+            h.proceso_id,
+            p.nombre AS proveedor,
+            COALESCE(SUM(CASE WHEN d.tipo_registro = 'META' THEN d.cantidad ELSE 0 END), 0) AS cantidad
+        FROM cabezamov h
+        LEFT JOIN provee p ON h.codcp = p.codp
+        LEFT JOIN cuerpomov d
+            ON  d.tm        = h.tm
+            AND d.prefijo   = h.prefijo
+            AND d.documento = h.documento
+            AND d.tipo_registro = 'META'
+        WHERE h.tm    = 'RPP'
+          AND h.tmaux = 'EPP'
+          AND h.docaux IN (
+              SELECT documento FROM cabezamov
+              WHERE  tm        = 'EPP'
+                AND  tmaux     = 'OPR'
+                AND  docaux    = :documento2
+                AND  proceso_id = :proceso_id2
+          )
+        GROUP BY h.tm, h.documento, h.docaux, h.fecha, h.estado, h.proceso_id, p.nombre
+
+        ORDER BY epp_doc DESC, tipo_fila ASC, documento DESC
         ", [
-                ':documento'  => $documento,
-                ':proceso_id' => $proceso_id
+                ':documento'   => $documento,
+                ':proceso_id'  => $proceso_id,
+                ':documento2'  => $documento,
+                ':proceso_id2' => $proceso_id
             ])->fetchAll(\PDO::FETCH_ASSOC);
 
             // -------------------------------------------------------

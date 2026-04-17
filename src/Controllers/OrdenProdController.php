@@ -588,6 +588,7 @@ class OrdenProdController
                 'h.fecha',
                 'h.fechent',
                 'h.estado',
+                'h.codcp',
                 'c.nombrecli'
             ],
 
@@ -601,52 +602,95 @@ class OrdenProdController
         }
 
         // ===============================
-        // 2. CONSULTA PRINCIPAL
+        // 2. CONSULTA PRINCIPAL (solo cabeceras + cliente)
         // ===============================
         $oprs = $this->db->select('cabezamov (h)', [
 
             '[>]geclientes (c)' => ['codcp' => 'codcli'],
 
-            '[>]cuerpomov (d)' => [
-                'tm' => 'tm',
-                'prefijo' => 'prefijo',
-                'documento' => 'documento'
-            ],
-
-            // 👇 relación EPP
-            '[>]cabezamov (epp)' => [
-                'documento' => 'docaux'
-            ]
-
         ], [
-
             'h.documento',
             'h.fecha',
             'h.fechent',
             'h.estado',
-
-            // 👇 CLIENTE
+            'h.codcp',
             'c.nombrecli(nombrecli)',
-
-            // 👇 OP (robusto con agregación)
             'op' => $this->db->raw('MAX(h.docaux)'),
-
-            // 👇 TOTAL PRENDAS
-            'total_prendas' => $this->db->raw('COALESCE(SUM(d.cantidad),0)'),
-
-            // 👇 ESTADO EPP
-            'tiene_epp' => $this->db->raw("
-            COUNT(DISTINCT CASE 
-                WHEN epp.tmaux = 'OPR' THEN epp.documento 
-            END)
-        ")
-
         ], $where);
-        // echo '<pre>'; 
-        // print_r($oprs); 
-        // exit;
+
         // ===============================
-        // 3. RENDER
+        // 3. POR OPR: total META, tiene_epp, terminadas
+        // ===============================
+        foreach ($oprs as &$opr) {
+            $doc   = $opr['documento'];
+            $codcp = $opr['codcp'] ?? null;
+
+            // Total prendas = META items del cuerpomov de la OPR
+            $total = (float) $this->db->query("
+                SELECT COALESCE(SUM(cantidad), 0)
+                FROM cuerpomov
+                WHERE tm             = 'OPR'
+                AND   documento      = :doc
+                AND   tipo_registro  = 'META'
+            ", [':doc' => $doc])->fetchColumn();
+
+            // Si no hay tipo_registro META, sumar todo (OPRs sin clasificar)
+            if ($total == 0) {
+                $total = (float) $this->db->query("
+                    SELECT COALESCE(SUM(cantidad), 0)
+                    FROM cuerpomov
+                    WHERE tm        = 'OPR'
+                    AND   documento = :doc
+                ", [':doc' => $doc])->fetchColumn();
+            }
+
+            // ¿Tiene alguna EPP creada?
+            $tiene_epp = (int) $this->db->query("
+                SELECT COUNT(*) FROM cabezamov
+                WHERE tm     = 'EPP'
+                AND   tmaux  = 'OPR'
+                AND   docaux = :doc
+            ", [':doc' => $doc])->fetchColumn();
+
+            // Último proceso de la FT
+            $ultimo = $this->db->query("
+                SELECT p.id
+                FROM ficha_tecnica_procesos ftp
+                INNER JOIN procesos_ft p      ON ftp.codigo_proceso = p.id
+                INNER JOIN fichas_tecnicas ft ON ftp.id_ficha_tecnica = ft.id
+                INNER JOIN cuerpomov od       ON od.tm = 'OPR' AND od.documento = :doc
+                INNER JOIN inrefinv ref       ON od.codr = ref.codr
+                                              AND ref.ref_fabrica = ft.id_producto_base
+                WHERE ft.id_cliente = :codcp
+                AND   ftp.activo    = 1
+                ORDER BY ftp.orden DESC
+                LIMIT 1
+            ", [':doc' => $doc, ':codcp' => $codcp])->fetchColumn();
+
+            // Prendas terminadas = RPP META del último proceso
+            $terminadas = 0;
+            if ($ultimo) {
+                $terminadas = (float) $this->db->query("
+                    SELECT COALESCE(SUM(d.cantidad), 0)
+                    FROM cuerpomov d
+                    INNER JOIN cabezamov h
+                        ON d.tm = h.tm AND d.prefijo = h.prefijo AND d.documento = h.documento
+                    WHERE h.tm            = 'RPP'
+                    AND   h.opr_id        = :doc
+                    AND   h.proceso_id    = :proceso
+                    AND   d.tipo_registro = 'META'
+                ", [':doc' => $doc, ':proceso' => $ultimo])->fetchColumn();
+            }
+
+            $opr['total_prendas'] = $total;
+            $opr['tiene_epp']     = $tiene_epp;
+            $opr['terminadas']    = $terminadas;
+            $opr['porcentaje']    = $total > 0 ? min(100, round(($terminadas / $total) * 100)) : 0;
+        }
+        unset($opr);
+
+        // ===============================
+        // 4. RENDER
         // ===============================
         return renderView(
             $response,
@@ -785,15 +829,16 @@ class OrdenProdController
                 $sql = "
                     SELECT SUM(d.cantidad) as total
                     FROM cuerpomov d
-                    INNER JOIN cabezamov h 
-                        ON d.tm = h.tm 
-                        AND d.prefijo = h.prefijo 
+                    INNER JOIN cabezamov h
+                        ON d.tm = h.tm
+                        AND d.prefijo = h.prefijo
                         AND d.documento = h.documento
-                    WHERE 
+                    WHERE
                         h.tm = 'EPP'
                         AND h.tmaux = 'OPR'
                         AND h.docaux = :documento
                         AND h.proceso_id = :proceso
+                        AND d.tipo_registro = 'META'
                 ";
 
                 $epp = $this->db->query($sql, [
@@ -808,15 +853,15 @@ class OrdenProdController
                 $sql = "
                     SELECT SUM(d.cantidad) as total
                     FROM cuerpomov d
-                    INNER JOIN cabezamov h 
-                        ON d.tm = h.tm 
-                        AND d.prefijo = h.prefijo 
+                    INNER JOIN cabezamov h
+                        ON d.tm = h.tm
+                        AND d.prefijo = h.prefijo
                         AND d.documento = h.documento
-                    WHERE 
+                    WHERE
                         h.tm = 'RPP'
-                        AND h.tmaux = 'OPR'
-                        AND h.docaux = :documento
+                        AND h.opr_id = :documento
                         AND h.proceso_id = :proceso
+                        AND d.tipo_registro = 'META'
                 ";
 
                 $rpp = $this->db->query($sql, [

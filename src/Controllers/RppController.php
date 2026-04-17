@@ -12,6 +12,100 @@ class RppController
     }
 
     // =============================================================
+    // SHOW — Ver detalle de una RPP
+    // =============================================================
+    public function show($request, $response, $args)
+    {
+        $documento = $args['documento'];
+
+        $cab = $this->db->get("cabezamov", [
+            "[>]satelites"   => ["satelite_id" => "id"],
+            "[>]provee"      => ["satelites.id_proveedor" => "codp"],
+            "[>]personal"    => ["responsable_id" => "id"],
+            "[>]procesos_ft" => ["proceso_id" => "id"]
+        ], [
+            "cabezamov.documento",
+            "cabezamov.fecha",
+            "cabezamov.estado",
+            "cabezamov.comen",
+            "cabezamov.docaux",       // EPP de referencia
+            "cabezamov.opr_id",       // OPR de referencia
+            "cabezamov.proceso_id",
+            "provee.nombre(satelite)",
+            "personal.nombres(responsable)",
+            "procesos_ft.nombre(proceso_nombre)"
+        ], [
+            "cabezamov.tm"        => "RPP",
+            "cabezamov.prefijo"   => "RPP",
+            "cabezamov.documento" => $documento
+        ]);
+
+        if (!$cab) {
+            $_SESSION['error'] = "RPP no encontrada: $documento";
+            return $response->withHeader('Location', '/orden-produccion/avance')->withStatus(302);
+        }
+
+        $det = $this->db->select("cuerpomov", "*", [
+            "tm"        => "RPP",
+            "prefijo"   => "RPP",
+            "documento" => $documento
+        ]);
+
+        return renderView($response, __DIR__ . '/../Views/rpp/show.php', "Detalle RPP", [
+            'cab'       => $cab,
+            'det'       => $det,
+            'documento' => $documento
+        ]);
+    }
+
+    // =============================================================
+    // PRINT — Imprimir una RPP
+    // =============================================================
+    public function print($request, $response, $args)
+    {
+        $documento = $args['documento'];
+
+        $cab = $this->db->get("cabezamov", [
+            "[>]satelites"   => ["satelite_id" => "id"],
+            "[>]provee"      => ["satelites.id_proveedor" => "codp"],
+            "[>]personal"    => ["responsable_id" => "id"],
+            "[>]procesos_ft" => ["proceso_id" => "id"]
+        ], [
+            "cabezamov.documento",
+            "cabezamov.fecha",
+            "cabezamov.estado",
+            "cabezamov.comen",
+            "cabezamov.docaux",
+            "cabezamov.opr_id",
+            "cabezamov.proceso_id",
+            "provee.nombre(satelite)",
+            "personal.nombres(responsable)",
+            "procesos_ft.nombre(proceso_nombre)"
+        ], [
+            "cabezamov.tm"        => "RPP",
+            "cabezamov.prefijo"   => "RPP",
+            "cabezamov.documento" => $documento
+        ]);
+
+        if (!$cab) {
+            $_SESSION['error'] = "RPP no encontrada: $documento";
+            return $response->withHeader('Location', '/orden-produccion/avance')->withStatus(302);
+        }
+
+        $det = $this->db->select("cuerpomov", "*", [
+            "tm"        => "RPP",
+            "prefijo"   => "RPP",
+            "documento" => $documento
+        ]);
+
+        return renderView($response, __DIR__ . '/../Views/rpp/print.php', "Impresión RPP", [
+            'cab'       => $cab,
+            'det'       => $det,
+            'documento' => $documento
+        ]);
+    }
+
+    // =============================================================
     // CREATE — Cargar formulario de nueva RPP a partir de una EPP
     // =============================================================
     public function create($request, $response, $args)

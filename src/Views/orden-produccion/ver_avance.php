@@ -46,7 +46,13 @@
 
         <div>
             <p class="text-xs text-gray-400 uppercase tracking-wide">Estado</p>
-            <p class="font-semibold"><?= $opr['estado'] ?: 'En proceso' ?></p>
+            <div class="flex items-center gap-3">
+                <p class="font-semibold"><?= $opr['estado'] ?: 'En proceso' ?></p>
+                <a href="/orden-produccion/ver/<?= $opr['documento'] ?>"
+                   class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1 rounded">
+                    Ver OPR
+                </a>
+            </div>
         </div>
 
     </div>
@@ -86,7 +92,8 @@
                         $epp  = $p['epp'] ?? 0;
                         $rpp  = $p['rpp'] ?? 0;
 
-                        $porcentaje = $meta > 0 ? round(($rpp / $meta) * 100) : 0;
+                        $base       = $meta > 0 ? $meta : $epp;
+                        $porcentaje = $base > 0 ? min(100, round(($rpp / $base) * 100)) : 0;
                         ?>
 
                         <tr>

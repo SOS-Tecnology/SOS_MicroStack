@@ -59,6 +59,12 @@ unset($_SESSION['errors']);
                         Aceptar
                     </button>
 
+                    <p class="text-center text-sm text-gray-500 mt-4">
+                        <a href="/forgot-password" class="text-blue-600 hover:underline">
+                            ¿Olvidaste tu contraseña?
+                        </a>
+                    </p>
+
                 </form>
             </div>
         </div>

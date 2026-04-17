@@ -167,21 +167,22 @@ $app->group('', function ($app) {
 
     $app->get('/usuarios', function ($request, $response) {
         $usuarios = $GLOBALS['db']->select("users", "*");
-        ob_start();
-        include __DIR__ . '/../src/Views/Usuarios/index.php';
-        $response->getBody()->write(ob_get_clean());
-        return $response;
+        return renderView($response, __DIR__ . '/../src/Views/Usuarios/index.php', "Usuarios", [
+            'usuarios' => $usuarios
+        ]);
     });
 
     $app->get('/usuarios/create', function ($request, $response) {
-        ob_start();
-        include __DIR__ . '/../src/Views/Usuarios/create.php';
-        $response->getBody()->write(ob_get_clean());
-        return $response;
+        return renderView($response, __DIR__ . '/../src/Views/Usuarios/create.php', "Nuevo Usuario", []);
     });
 
     $app->post('/usuarios/store', function ($request, $response) {
         $data = $request->getParsedBody();
+
+        if ($GLOBALS['db']->has("users", ["email" => $data['email']])) {
+            $_SESSION['errors'] = ["El correo ya está registrado."];
+            return $response->withHeader('Location', '/usuarios/create')->withStatus(302);
+        }
 
         $GLOBALS['db']->insert("users", [
             "name"     => $data['nombre'],
@@ -190,14 +191,55 @@ $app->group('', function ($app) {
             "rol"      => $data['rol']
         ]);
 
-        $exists = $GLOBALS['db']->has("users", ["email" => $data['email']]);
-
-        if ($exists) {
-            $_SESSION['errors'] = ["El correo ya está registrado"];
-            return $response->withHeader('Location', '/usuarios/create')->withStatus(302);
-        }
+        $_SESSION['success'] = "Usuario {$data['nombre']} creado correctamente.";
+        return $response->withHeader('Location', '/usuarios')->withStatus(302);
     });
 
+    // Editar usuario
+    $app->get('/usuarios/{id}/edit', function ($request, $response, $args) {
+        $usuario = $GLOBALS['db']->get("users", "*", ["id" => (int)$args['id']]);
+        if (!$usuario) {
+            return $response->withHeader('Location', '/usuarios')->withStatus(302);
+        }
+        return renderView($response, __DIR__ . '/../src/Views/Usuarios/edit.php', "Editar Usuario", [
+            'usuario' => $usuario
+        ]);
+    });
+
+    $app->post('/usuarios/{id}/update', function ($request, $response, $args) {
+        $id   = (int)$args['id'];
+        $data = $request->getParsedBody();
+
+        // Verificar correo duplicado (excluyendo el propio usuario)
+        $existe = $GLOBALS['db']->has("users", [
+            "email" => $data['email'],
+            "id[!]" => $id
+        ]);
+        if ($existe) {
+            $_SESSION['errors'] = ["El correo ya está en uso por otro usuario."];
+            return $response->withHeader('Location', '/usuarios/' . $id . '/edit')->withStatus(302);
+        }
+
+        $campos = [
+            "name"  => $data['nombre'],
+            "email" => $data['email'],
+            "rol"   => $data['rol']
+        ];
+        if (!empty($data['password'])) {
+            $campos["password"] = password_hash($data['password'], PASSWORD_DEFAULT);
+        }
+
+        $GLOBALS['db']->update("users", $campos, ["id" => $id]);
+        $_SESSION['success'] = "Usuario actualizado correctamente.";
+        return $response->withHeader('Location', '/usuarios')->withStatus(302);
+    });
+
+    // Eliminar usuario
+    $app->post('/usuarios/{id}/delete', function ($request, $response, $args) {
+        $GLOBALS['db']->delete("users", ["id" => (int)$args['id']]);
+        $_SESSION['success'] = "Usuario eliminado.";
+        return $response->withHeader('Location', '/usuarios')->withStatus(302);
+    });
 
     // ---------------------------------------------------------
     // RUTAS: FICHAS TÉCNICAS
@@ -493,6 +535,16 @@ $app->group('', function ($app) {
         return $controller->getOprData($request, $response, $args);
     });
 
+    $app->get('/rpp/print/{documento}', function ($request, $response, $args) {
+        $controller = new \App\Controllers\RppController($GLOBALS['db']);
+        return $controller->print($request, $response, $args);
+    });
+
+    $app->get('/rpp/show/{documento}', function ($request, $response, $args) {
+        $controller = new \App\Controllers\RppController($GLOBALS['db']);
+        return $controller->show($request, $response, $args);
+    });
+
     $app->get('/rpp/create/{epp}', function ($request, $response, $args) {
         $controller = new \App\Controllers\RppController($GLOBALS['db']);
         return $controller->create($request, $response, $args);
@@ -503,5 +555,113 @@ $app->group('', function ($app) {
         return $controller->store($request, $response);
     });
 })->add($authMiddleware);
+
+// ---------------------------------------------------------
+// RUTAS PÚBLICAS: RECUPERACIÓN DE CONTRASEÑA
+// ---------------------------------------------------------
+
+$app->get('/forgot-password', function ($request, $response) {
+    ob_start();
+    include __DIR__ . '/../src/Views/Auth/forgot-password.php';
+    $response->getBody()->write(ob_get_clean());
+    return $response;
+});
+
+$app->post('/forgot-password', function ($request, $response) {
+    $email = trim($request->getParsedBody()['email'] ?? '');
+
+    $user = $GLOBALS['db']->get("users", ["id", "name", "email"], ["email" => $email]);
+
+    // Respuesta genérica para no revelar si el correo existe
+    if (!$user) {
+        $_SESSION['success'] = "Si el correo está registrado, recibirás un enlace en breve.";
+        return $response->withHeader('Location', '/forgot-password')->withStatus(302);
+    }
+
+    // Crear tabla de tokens si no existe
+    $GLOBALS['db']->query("
+        CREATE TABLE IF NOT EXISTS password_resets (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            email VARCHAR(255) NOT NULL,
+            token VARCHAR(64) NOT NULL,
+            expires_at DATETIME NOT NULL,
+            INDEX (token),
+            INDEX (email)
+        )
+    ");
+
+    // Generar token seguro
+    $token   = bin2hex(random_bytes(32));
+    $expires = date('Y-m-d H:i:s', time() + 3600); // 1 hora
+
+    $GLOBALS['db']->delete("password_resets", ["email" => $email]);
+    $GLOBALS['db']->insert("password_resets", [
+        "email"      => $email,
+        "token"      => $token,
+        "expires_at" => $expires
+    ]);
+
+    $resetUrl = (isset($_SERVER['HTTPS']) ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/reset-password/' . $token;
+    $nombre   = $user['name'];
+
+    $subject = "Restablecer contraseña - SOS MicroStack";
+    $body    = "Hola {$nombre},\n\nHaz clic en el siguiente enlace para restablecer tu contraseña (válido 1 hora):\n\n{$resetUrl}\n\nSi no solicitaste esto, ignora este mensaje.\n\nSOS Technology";
+    $headers = "From: noreply@sos-microstack.local\r\nContent-Type: text/plain; charset=UTF-8";
+
+    @mail($email, $subject, $body, $headers);
+
+    $_SESSION['success'] = "Si el correo está registrado, recibirás un enlace en breve.";
+    return $response->withHeader('Location', '/forgot-password')->withStatus(302);
+});
+
+$app->get('/reset-password/{token}', function ($request, $response, $args) {
+    $token = $args['token'];
+
+    $reset = $GLOBALS['db']->get("password_resets", "*", [
+        "token"         => $token,
+        "expires_at[>]" => date('Y-m-d H:i:s')
+    ]);
+
+    if (!$reset) {
+        $_SESSION['errors'] = ["El enlace no es válido o ha expirado."];
+        return $response->withHeader('Location', '/forgot-password')->withStatus(302);
+    }
+
+    ob_start();
+    include __DIR__ . '/../src/Views/Auth/reset-password.php';
+    $response->getBody()->write(ob_get_clean());
+    return $response;
+});
+
+$app->post('/reset-password/{token}', function ($request, $response, $args) {
+    $token    = $args['token'];
+    $data     = $request->getParsedBody();
+    $password = $data['password'] ?? '';
+
+    $reset = $GLOBALS['db']->get("password_resets", "*", [
+        "token"         => $token,
+        "expires_at[>]" => date('Y-m-d H:i:s')
+    ]);
+
+    if (!$reset) {
+        $_SESSION['errors'] = ["El enlace no es válido o ha expirado."];
+        return $response->withHeader('Location', '/forgot-password')->withStatus(302);
+    }
+
+    if (strlen($password) < 8) {
+        $_SESSION['errors'] = ["La contraseña debe tener al menos 8 caracteres."];
+        return $response->withHeader('Location', '/reset-password/' . $token)->withStatus(302);
+    }
+
+    $GLOBALS['db']->update("users",
+        ["password" => password_hash($password, PASSWORD_DEFAULT)],
+        ["email"    => $reset['email']]
+    );
+
+    $GLOBALS['db']->delete("password_resets", ["token" => $token]);
+
+    $_SESSION['success'] = "Contraseña actualizada. Ya puedes iniciar sesión.";
+    return $response->withHeader('Location', '/login')->withStatus(302);
+});
 
 $app->run();

@@ -5,3 +5,12 @@ echo "PROCESO_ID: " . $p['id_proceso'] . "\n";
 print_r($p);
 echo "</pre>";
 die();
+
+
+echo "<pre>";
+echo "DOCUMENTO: " . $codtipocli . "\n";
+$resultados = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+echo "\nARRAY COMPLETO:\n";
+    print_r($resultados);
+echo "</pre>";
+die();
